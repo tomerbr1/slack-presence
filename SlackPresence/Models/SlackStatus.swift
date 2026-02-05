@@ -1,0 +1,50 @@
+import Foundation
+
+enum SlackPresence: String, Codable {
+    case active = "auto"
+    case away = "away"
+    case unknown
+
+    var displayName: String {
+        switch self {
+        case .active: return "Active"
+        case .away: return "Away"
+        case .unknown: return "Unknown"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .active: return "circle.fill"
+        case .away: return "circle"
+        case .unknown: return "questionmark.circle"
+        }
+    }
+}
+
+struct SlackStatusEmoji: Equatable {
+    let emoji: String
+    let text: String
+    let expiration: Int  // Unix timestamp, 0 = no expiration
+
+    static let inMeeting = SlackStatusEmoji(
+        emoji: ":headphones:",
+        text: "In a call",
+        expiration: 0
+    )
+
+    static let clear = SlackStatusEmoji(
+        emoji: "",
+        text: "",
+        expiration: 0
+    )
+}
+
+struct SlackCredentials: Codable {
+    let token: String      // xoxc-... token
+    let cookie: String     // d cookie value
+
+    var isValid: Bool {
+        token.hasPrefix("xoxc-") && !cookie.isEmpty
+    }
+}

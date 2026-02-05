@@ -1,0 +1,130 @@
+import Foundation
+import SwiftUI
+
+@Observable
+final class AppState {
+    // Current state
+    var currentPresence: SlackPresence = .unknown
+    var isInCall: Bool = false
+    var hasValidCredentials: Bool = false
+    var isDNDActive: Bool = false
+
+    // Network connectivity (reads from NetworkMonitor)
+    var isConnected: Bool {
+        NetworkMonitor.shared.isConnected
+    }
+
+    // Call detection status for display
+    var micActive: Bool = false
+    var manualInCallOverride: Bool? = nil  // nil = auto-detect, true/false = manual
+
+    // Status display
+    var statusText: String = "Initializing..."
+    var lastError: String?
+    var lastUpdate: Date?
+
+    // Override mode
+    var manualOverride: SlackPresence? = nil
+
+    // Computed
+    var effectivePresence: SlackPresence {
+        if let override = manualOverride {
+            return override
+        }
+        return currentPresence
+    }
+
+    var menuBarIcon: String {
+        if isInCall {
+            return "headphones"
+        }
+        switch effectivePresence {
+        case .active:
+            return "sun.max.fill"
+        case .away:
+            // moon.zzz.fill is a built-in SF Symbol for away + DND
+            return isDNDActive ? "moon.zzz.fill" : "moon.fill"
+        case .unknown:
+            return "questionmark.circle"
+        }
+    }
+
+    /// Whether the icon needs a DND badge overlay (only for Active + DND)
+    var needsDNDBadge: Bool {
+        return isDNDActive && effectivePresence == .active && !isInCall
+    }
+
+    var menuBarIconColor: Color {
+        if isInCall {
+            return .purple
+        }
+        switch effectivePresence {
+        case .active:
+            return .green
+        case .away:
+            return .gray
+        case .unknown:
+            return .orange
+        }
+    }
+
+    func updateStatus(_ text: String) {
+        statusText = text
+        lastUpdate = Date()
+        lastError = nil
+    }
+
+    func setError(_ error: String) {
+        lastError = error
+        statusText = "Error: \(error)"
+    }
+
+    func clearOverride() {
+        manualOverride = nil
+    }
+}
+
+// Configuration state
+@Observable
+final class ConfigState {
+    var schedule: WeekSchedule = WeekSchedule()
+    var callDetectionEnabled: Bool = true
+    var pauseNotificationsWhenAway: Bool = true
+    var scheduledStatuses: [ScheduledStatus] = []
+    var callStartDelay: Int = 10  // Seconds to confirm call started
+    var callEndDelay: Int = 3     // Seconds to confirm call ended
+    var disabledDeviceUIDs: Set<String> = []  // Device UIDs user has disabled
+    var hasCompletedOnboarding: Bool = false
+
+    // Track current active scheduled status
+    var activeScheduledStatus: ScheduledStatus? = nil
+
+    func load(from config: AppConfig) {
+        schedule = config.schedules
+        callDetectionEnabled = config.callDetectionEnabled
+        pauseNotificationsWhenAway = config.pauseNotificationsWhenAway
+        scheduledStatuses = config.scheduledStatuses
+        callStartDelay = config.callStartDelay
+        callEndDelay = config.callEndDelay
+        disabledDeviceUIDs = config.disabledDeviceUIDs
+        hasCompletedOnboarding = config.hasCompletedOnboarding
+
+        // Apply to MicMonitor
+        MicMonitor.shared.callStartDelay = TimeInterval(callStartDelay)
+        MicMonitor.shared.callEndDelay = TimeInterval(callEndDelay)
+        MicMonitor.shared.userDisabledDeviceUIDs = disabledDeviceUIDs
+    }
+
+    func toConfig() -> AppConfig {
+        var config = AppConfig()
+        config.schedules = schedule
+        config.callDetectionEnabled = callDetectionEnabled
+        config.pauseNotificationsWhenAway = pauseNotificationsWhenAway
+        config.scheduledStatuses = scheduledStatuses
+        config.callStartDelay = callStartDelay
+        config.callEndDelay = callEndDelay
+        config.disabledDeviceUIDs = disabledDeviceUIDs
+        config.hasCompletedOnboarding = hasCompletedOnboarding
+        return config
+    }
+}

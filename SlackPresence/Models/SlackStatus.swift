@@ -12,14 +12,6 @@ enum SlackPresence: String, Codable {
         case .unknown: return "Unknown"
         }
     }
-
-    var iconName: String {
-        switch self {
-        case .active: return "circle.fill"
-        case .away: return "circle"
-        case .unknown: return "questionmark.circle"
-        }
-    }
 }
 
 struct SlackStatusEmoji: Equatable {

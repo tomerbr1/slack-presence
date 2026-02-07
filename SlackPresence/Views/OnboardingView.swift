@@ -219,6 +219,7 @@ struct CredentialsStepView: View {
     @State private var cookie: String = ""
     @State private var isTesting: Bool = false
     @State private var connectionStatus: ConnectionStatus = .unknown
+    @State private var errorMessage: String?
 
     enum ConnectionStatus {
         case unknown, testing, connected, failed
@@ -343,7 +344,7 @@ struct CredentialsStepView: View {
         case .unknown: return "Enter your Slack credentials"
         case .testing: return "Verifying with Slack..."
         case .connected: return "Ready to manage your presence"
-        case .failed: return "Check your token and cookie"
+        case .failed: return errorMessage ?? "Check your token and cookie"
         }
     }
 
@@ -370,33 +371,67 @@ struct CredentialsStepView: View {
 
     private func saveCredentials() {
         let creds = SlackCredentials(token: token, cookie: cookie)
+        errorMessage = nil
         do {
             try ConfigManager.shared.saveCredentials(creds)
             SlackClient.shared.updateCredentials(creds)
-            appState.hasValidCredentials = true
-            connectionStatus = .connected
+            // Verify credentials work before marking as connected
+            connectionStatus = .testing
+            isTesting = true
+            Task {
+                do {
+                    let success = try await SlackClient.shared.testConnection(with: creds)
+                    await MainActor.run {
+                        if success {
+                            appState.hasValidCredentials = true
+                            connectionStatus = .connected
+                            errorMessage = nil
+                        } else {
+                            appState.hasValidCredentials = false
+                            connectionStatus = .failed
+                            errorMessage = "Invalid credentials"
+                        }
+                        isTesting = false
+                    }
+                } catch {
+                    await MainActor.run {
+                        appState.hasValidCredentials = false
+                        connectionStatus = .failed
+                        errorMessage = error.localizedDescription
+                        isTesting = false
+                    }
+                }
+            }
         } catch {
             connectionStatus = .failed
+            errorMessage = error.localizedDescription
         }
     }
 
     private func testConnection() {
         connectionStatus = .testing
         isTesting = true
+        errorMessage = nil
 
         let creds = SlackCredentials(token: token, cookie: cookie)
-        SlackClient.shared.updateCredentials(creds)
 
         Task {
             do {
-                let success = try await SlackClient.shared.testConnection()
+                let success = try await SlackClient.shared.testConnection(with: creds)
                 await MainActor.run {
-                    connectionStatus = success ? .connected : .failed
+                    if success {
+                        connectionStatus = .connected
+                        errorMessage = nil
+                    } else {
+                        connectionStatus = .failed
+                        errorMessage = "Invalid credentials"
+                    }
                     isTesting = false
                 }
             } catch {
                 await MainActor.run {
                     connectionStatus = .failed
+                    errorMessage = error.localizedDescription
                     isTesting = false
                 }
             }
@@ -546,7 +581,7 @@ struct DevicesStepView: View {
             ScrollView {
                 VStack(spacing: 8) {
                     ForEach(devices) { device in
-                        OnboardingDeviceRow(
+                        SharedDeviceRow(
                             device: device,
                             isEnabled: !configState.disabledDeviceUIDs.contains(device.uid),
                             onToggle: { enabled in
@@ -593,69 +628,6 @@ struct DevicesStepView: View {
         }
         ScheduleManager.shared.saveConfig()
         devices = MicMonitor.shared.getAllDevicesInfo()
-    }
-}
-
-struct OnboardingDeviceRow: View {
-    let device: AudioDeviceInfo
-    let isEnabled: Bool
-    let onToggle: (Bool) -> Void
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(statusColor)
-                .frame(width: 10, height: 10)
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(device.name)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    Text("(\(device.transportType))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                if device.isIgnored, let reason = device.ignoreReason, !device.isUserDisabled {
-                    Text(reason)
-                        .font(.caption2)
-                        .foregroundColor(.orange)
-                }
-            }
-
-            Spacer()
-
-            if !device.isIgnored || device.isUserDisabled {
-                Toggle("", isOn: Binding(
-                    get: { isEnabled },
-                    set: { onToggle($0) }
-                ))
-                .toggleStyle(.switch)
-                .labelsHidden()
-            } else {
-                Text("Auto")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.orange.opacity(0.1))
-                    .cornerRadius(4)
-            }
-        }
-        .padding(12)
-        .background(Color(.controlBackgroundColor).opacity(0.5))
-        .cornerRadius(8)
-    }
-
-    private var statusColor: Color {
-        if device.isIgnored && !device.isUserDisabled {
-            return Color.orange.opacity(0.6)
-        }
-        if !isEnabled {
-            return Color.gray.opacity(0.3)
-        }
-        return device.isRunning ? Color.green : Color.gray.opacity(0.4)
     }
 }
 
@@ -753,8 +725,6 @@ struct ScheduleStepView: View {
 struct FinishStepView: View {
     @Binding var dontShowAgain: Bool
     @State private var checkmarkScale: CGFloat = 0
-    @State private var launchAtLogin: Bool = SMAppService.mainApp.status == .enabled
-    @State private var loginItemMessage: String? = nil
 
     var body: some View {
         VStack(spacing: 20) {
@@ -782,43 +752,8 @@ struct FinishStepView: View {
                 .padding(.horizontal, 40)
 
             // Launch at Login - Important setting
-            VStack(spacing: 8) {
-                HStack(spacing: 12) {
-                    Image(systemName: "power")
-                        .font(.title3)
-                        .foregroundColor(.blue)
-                        .frame(width: 28)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Launch at Login")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        Text("Keep SlackPresence running after every restart")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-
-                    Toggle("", isOn: $launchAtLogin)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
-                        .onChange(of: launchAtLogin) { _, newValue in
-                            updateLaunchAtLogin(enabled: newValue)
-                        }
-                }
-                .padding(12)
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(10)
-
-                if let message = loginItemMessage {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundColor(message.starts(with: "Failed") ? .red : .green)
-                        .transition(.opacity)
-                }
-            }
-            .padding(.horizontal, 40)
+            LaunchAtLoginToggle(showIcon: true, backgroundColor: Color.blue.opacity(0.1))
+                .padding(.horizontal, 40)
 
             // Quick reference cards
             VStack(spacing: 10) {
@@ -853,26 +788,6 @@ struct FinishStepView: View {
                 .padding(.horizontal, 40)
         }
         .padding()
-    }
-
-    private func updateLaunchAtLogin(enabled: Bool) {
-        do {
-            if enabled {
-                try SMAppService.mainApp.register()
-                loginItemMessage = "Added to Login Items"
-            } else {
-                try SMAppService.mainApp.unregister()
-                loginItemMessage = "Removed from Login Items"
-            }
-            // Clear message after 3 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                loginItemMessage = nil
-            }
-        } catch {
-            // Revert toggle on failure
-            launchAtLogin = !enabled
-            loginItemMessage = "Failed: \(error.localizedDescription)"
-        }
     }
 }
 

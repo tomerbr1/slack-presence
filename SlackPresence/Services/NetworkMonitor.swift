@@ -6,7 +6,6 @@ final class NetworkMonitor {
     static let shared = NetworkMonitor()
 
     private(set) var isConnected = true
-    private(set) var connectionType: NWInterface.InterfaceType?
 
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "NetworkMonitor")
@@ -22,7 +21,6 @@ final class NetworkMonitor {
 
             DispatchQueue.main.async {
                 self?.isConnected = nowConnected
-                self?.connectionType = path.availableInterfaces.first?.type
 
                 // Trigger callback when connectivity restored
                 if !wasConnected && nowConnected {
@@ -35,5 +33,6 @@ final class NetworkMonitor {
 
     func stop() {
         monitor.cancel()
+        onConnectivityRestored = nil  // Clear callback to release captured references
     }
 }

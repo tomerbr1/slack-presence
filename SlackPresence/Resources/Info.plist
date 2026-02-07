@@ -36,7 +36,7 @@
     <string>Copyright 2024. All rights reserved.</string>
 
     <key>NSMicrophoneUsageDescription</key>
-    <string>SlackPresence needs microphone access to detect when you're in a Webex call.</string>
+    <string>SlackPresence needs microphone access to detect when you're in a call (any app).</string>
 
     <key>NSAppleEventsUsageDescription</key>
     <string>SlackPresence needs automation access to detect running applications.</string>

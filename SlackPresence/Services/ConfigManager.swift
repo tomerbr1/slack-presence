@@ -91,7 +91,9 @@ final class ConfigManager {
             let data = try Data(contentsOf: configFile)
             return try JSONDecoder().decode(AppConfig.self, from: data)
         } catch {
+            #if DEBUG
             print("Config load failed, using defaults: \(error)")
+            #endif
             return AppConfig()
         }
     }
@@ -106,7 +108,17 @@ final class ConfigManager {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(config)
-        try data.write(to: configFile)
+        try data.write(to: configFile, options: .atomic)
+
+        // Restrict permissions: directory 0700, file 0600
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o700],
+            ofItemAtPath: configDirectory.path
+        )
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o600],
+            ofItemAtPath: configFile.path
+        )
     }
 
     // MARK: - Keychain (Credentials)
@@ -124,21 +136,19 @@ final class ConfigManager {
         return SlackCredentials(token: token, cookie: cookie)
     }
 
-    func deleteCredentials() {
-        deleteFromKeychain(key: tokenKey)
-        deleteFromKeychain(key: cookieKey)
-    }
-
     // MARK: - Keychain Helpers
 
     private func saveToKeychain(key: String, value: String) throws {
-        let data = value.data(using: .utf8)!
+        guard let data = value.data(using: .utf8) else {
+            throw KeychainError.saveFailed(errSecParam)
+        }
 
         // Delete existing item first
         deleteFromKeychain(key: key)
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.user.slack-presence",
             kSecAttrAccount as String: key,
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
@@ -153,6 +163,7 @@ final class ConfigManager {
     private func loadFromKeychain(key: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.user.slack-presence",
             kSecAttrAccount as String: key,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
@@ -173,6 +184,7 @@ final class ConfigManager {
     private func deleteFromKeychain(key: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.user.slack-presence",
             kSecAttrAccount as String: key
         ]
         SecItemDelete(query as CFDictionary)

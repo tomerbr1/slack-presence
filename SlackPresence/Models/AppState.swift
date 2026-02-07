@@ -9,11 +9,6 @@ final class AppState {
     var hasValidCredentials: Bool = false
     var isDNDActive: Bool = false
 
-    // Network connectivity (reads from NetworkMonitor)
-    var isConnected: Bool {
-        NetworkMonitor.shared.isConnected
-    }
-
     // Call detection status for display
     var micActive: Bool = false
     var manualInCallOverride: Bool? = nil  // nil = auto-detect, true/false = manual

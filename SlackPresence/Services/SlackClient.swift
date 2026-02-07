@@ -4,14 +4,19 @@ final class SlackClient {
     static let shared = SlackClient()
 
     private let baseURL = "https://slack.com/api"
-    private var credentials: SlackCredentials?
+    private let credentialsLock = NSLock()
+    private var _credentials: SlackCredentials?
+    private var credentials: SlackCredentials? {
+        get { credentialsLock.withLock { _credentials } }
+        set { credentialsLock.withLock { _credentials = newValue } }
+    }
 
     // Retry configuration
     private let maxRetries = 3
     private let baseDelay: TimeInterval = 2.0
 
     private init() {
-        credentials = ConfigManager.shared.loadCredentials()
+        _credentials = ConfigManager.shared.loadCredentials()
     }
 
     // MARK: - Retry Logic
@@ -271,9 +276,13 @@ final class SlackClient {
     // MARK: - Test Connection
 
     func testConnection() async throws -> Bool {
-        guard let creds = credentials, creds.isValid else {
-            return false
-        }
+        guard let creds = credentials else { return false }
+        return try await testConnection(with: creds)
+    }
+
+    /// Test connection with specific credentials without mutating shared state
+    func testConnection(with creds: SlackCredentials) async throws -> Bool {
+        guard creds.isValid else { return false }
 
         guard let url = URL(string: "\(baseURL)/auth.test") else {
             return false

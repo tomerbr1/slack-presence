@@ -1,5 +1,4 @@
 import SwiftUI
-import AVFoundation
 import ServiceManagement
 
 // MARK: - Onboarding Step Enum
@@ -7,7 +6,6 @@ import ServiceManagement
 enum OnboardingStep: Int, CaseIterable {
     case welcome = 0
     case credentials
-    case permissions
     case devices
     case schedule
     case finish
@@ -16,7 +14,6 @@ enum OnboardingStep: Int, CaseIterable {
         switch self {
         case .welcome: return "Welcome"
         case .credentials: return "Connect to Slack"
-        case .permissions: return "Permissions"
         case .devices: return "Device Selection"
         case .schedule: return "Schedule"
         case .finish: return "All Set!"
@@ -48,8 +45,6 @@ struct OnboardingView: View {
                     WelcomeStepView()
                 case .credentials:
                     CredentialsStepView(appState: appState)
-                case .permissions:
-                    PermissionsStepView()
                 case .devices:
                     DevicesStepView(configState: configState)
                 case .schedule:
@@ -84,7 +79,7 @@ struct OnboardingView: View {
                 if currentStep == .credentials {
                     Button("Skip for Now") {
                         withAnimation {
-                            currentStep = .permissions
+                            currentStep = .devices
                         }
                     }
                     .foregroundColor(.secondary)
@@ -439,122 +434,7 @@ struct CredentialsStepView: View {
     }
 }
 
-// MARK: - Step 3: Permissions
-
-struct PermissionsStepView: View {
-    @State private var micPermissionStatus: AVAuthorizationStatus = .notDetermined
-
-    var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            Image(systemName: "mic.fill")
-                .font(.system(size: 48))
-                .foregroundColor(.purple)
-
-            Text("Microphone Permission")
-                .font(.title2)
-                .fontWeight(.semibold)
-
-            Text("SlackPresence uses microphone access to detect when you're in a call")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-
-            // Privacy card
-            OnboardingInfoCard(
-                icon: "lock.shield.fill",
-                iconColor: .blue,
-                title: "Your Privacy is Protected",
-                description: "We never record audio or listen to your conversations. We only check if the microphone is active to detect calls."
-            )
-            .padding(.horizontal, 30)
-
-            // Permission status
-            HStack(spacing: 12) {
-                Image(systemName: permissionIcon)
-                    .font(.title2)
-                    .foregroundColor(permissionColor)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(permissionTitle)
-                        .font(.headline)
-                    Text(permissionSubtitle)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
-
-                if micPermissionStatus == .notDetermined || micPermissionStatus == .denied {
-                    Button("Grant Access") {
-                        requestPermission()
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-            }
-            .padding(16)
-            .background(Color(.controlBackgroundColor))
-            .cornerRadius(10)
-            .padding(.horizontal, 30)
-
-            Spacer()
-        }
-        .padding()
-        .onAppear {
-            micPermissionStatus = AVCaptureDevice.authorizationStatus(for: .audio)
-        }
-    }
-
-    private var permissionIcon: String {
-        switch micPermissionStatus {
-        case .authorized: return "checkmark.circle.fill"
-        case .denied, .restricted: return "xmark.circle.fill"
-        default: return "questionmark.circle"
-        }
-    }
-
-    private var permissionColor: Color {
-        switch micPermissionStatus {
-        case .authorized: return .green
-        case .denied, .restricted: return .red
-        default: return .orange
-        }
-    }
-
-    private var permissionTitle: String {
-        switch micPermissionStatus {
-        case .authorized: return "Permission Granted"
-        case .denied: return "Permission Denied"
-        case .restricted: return "Permission Restricted"
-        default: return "Permission Required"
-        }
-    }
-
-    private var permissionSubtitle: String {
-        switch micPermissionStatus {
-        case .authorized: return "Call detection is ready to use"
-        case .denied: return "Open System Settings to enable"
-        case .restricted: return "Your device restricts this permission"
-        default: return "Click to enable call detection"
-        }
-    }
-
-    private func requestPermission() {
-        if micPermissionStatus == .denied {
-            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
-        } else {
-            AVCaptureDevice.requestAccess(for: .audio) { granted in
-                DispatchQueue.main.async {
-                    micPermissionStatus = AVCaptureDevice.authorizationStatus(for: .audio)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Step 4: Devices
+// MARK: - Step 3: Devices
 
 struct DevicesStepView: View {
     @Bindable var configState: ConfigState

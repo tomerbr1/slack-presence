@@ -1,6 +1,5 @@
 import SwiftUI
 import AppKit
-import AVFoundation
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem?
@@ -55,9 +54,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             object: nil
         )
 
-        // Request microphone permission for Webex call detection
-        requestMicrophonePermission()
-
         // Start the schedule manager
         ScheduleManager.shared.start(appState: appState, configState: configState)
 
@@ -67,49 +63,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 self?.openWelcome()
             }
-        }
-    }
-
-    private func requestMicrophonePermission() {
-        let status = AVCaptureDevice.authorizationStatus(for: .audio)
-        #if DEBUG
-        print("[MicPermission] Current status: \(status.rawValue) (0=notDetermined, 1=restricted, 2=denied, 3=authorized)")
-        #endif
-
-        switch status {
-        case .authorized:
-            #if DEBUG
-            print("[MicPermission] Already authorized")
-            #endif
-        case .notDetermined:
-            #if DEBUG
-            print("[MicPermission] Not determined - requesting access...")
-            #endif
-            AVCaptureDevice.requestAccess(for: .audio) { granted in
-                #if DEBUG
-                print("[MicPermission] Request result: \(granted ? "granted" : "denied")")
-                #endif
-            }
-        case .denied, .restricted:
-            #if DEBUG
-            print("[MicPermission] Denied or restricted - showing alert")
-            #endif
-            DispatchQueue.main.async {
-                let alert = NSAlert()
-                alert.messageText = "Microphone Access Required"
-                alert.informativeText = "SlackPresence needs microphone access to detect calls. Please enable it in System Settings → Privacy & Security → Microphone."
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "Open System Settings")
-                alert.addButton(withTitle: "Later")
-
-                if alert.runModal() == .alertFirstButtonReturn {
-                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
-                }
-            }
-        @unknown default:
-            #if DEBUG
-            print("[MicPermission] Unknown status")
-            #endif
         }
     }
 

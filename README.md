@@ -249,14 +249,13 @@ SlackPresence/
 │   └── Notifications.swift         # App-wide notification names
 ├── Views/
 │   ├── OnboardingView.swift        # Welcome guide (6-step wizard)
-│   ├── MenuBarView.swift           # Menu content
 │   ├── ScheduleEditorView.swift    # Per-day schedule UI
 │   ├── StatusScheduleEditorView.swift # Scheduled statuses editor
 │   ├── SettingsView.swift          # Token config, call detection, devices
+│   ├── SharedComponents.swift      # Reusable UI components
 │   ├── TokenHelpView.swift         # Credentials setup guide
 │   ├── DebugView.swift             # Debug info (mic status, devices)
-│   ├── AboutView.swift             # About screen
-│   └── StatusIndicatorView.swift   # Status display
+│   └── AboutView.swift             # About screen
 ├── Services/
 │   ├── SlackClient.swift           # Slack API calls
 │   ├── MicMonitor.swift            # Microphone-based call detection

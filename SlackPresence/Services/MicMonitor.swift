@@ -1,5 +1,4 @@
 import Foundation
-import AppKit
 import CoreAudio
 import AVFoundation
 
@@ -32,6 +31,7 @@ struct DebugInfo {
 final class MicMonitor {
     static let shared = MicMonitor()
 
+    private let stateLock = NSLock()
     private var timer: Timer?
     private var isMonitoring = false
 
@@ -93,24 +93,23 @@ final class MicMonitor {
     // MARK: - Manual Override
 
     func setManualInCall() {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+
         manualOverride = true
         resetCallState()
-        let newState = isInCall()
+        let newState = isInCallLocked()
         if newState != lastKnownState {
             lastKnownState = newState
             onCallStateChanged?(newState)
         }
     }
 
-    func clearManualOverride() {
-        manualOverride = nil
-        resetCallState()
-        // Re-evaluate state based on mic detection
-        checkCallState()
-    }
-
     /// Force clear call state and suppress auto-detection for a period
     func forceClearCall() {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+
         manualOverride = nil
         lastKnownState = false
         resetCallState()
@@ -150,11 +149,14 @@ final class MicMonitor {
         timer?.invalidate()
         timer = nil
         isMonitoring = false
+        onCallStateChanged = nil  // Clear callback to release captured references
     }
 
     func checkCallState() {
-        let inCall = isInCall()
+        stateLock.lock()
+        defer { stateLock.unlock() }
 
+        let inCall = isInCallLocked()
         if inCall != lastKnownState {
             lastKnownState = inCall
             onCallStateChanged?(inCall)
@@ -167,7 +169,8 @@ final class MicMonitor {
     ///
     /// Logic: Manual override takes priority, otherwise mic active = in call
     /// Debouncing: configurable delay to confirm call start/end
-    func isInCall() -> Bool {
+    /// Note: Caller must hold stateLock when calling this method
+    private func isInCallLocked() -> Bool {
         // Manual override takes priority
         if let override = manualOverride {
             return override
@@ -176,6 +179,13 @@ final class MicMonitor {
         // Auto-detect from mic
         let micActive = isAnyMicrophoneInUse()
         return applyDebouncing(rawInCall: micActive)
+    }
+
+    /// Thread-safe wrapper for isInCall
+    func isInCall() -> Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return isInCallLocked()
     }
 
     /// Apply debouncing to prevent flickering state changes
@@ -606,8 +616,11 @@ final class MicMonitor {
     // MARK: - For Testing / Debugging
 
     func forceCheck() -> (micActive: Bool, inCall: Bool) {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+
         let mic = isAnyMicrophoneInUse()
-        return (mic, isInCall())
+        return (mic, isInCallLocked())
     }
 
     // MARK: - Device Management (for Settings UI)
@@ -646,33 +659,9 @@ final class MicMonitor {
         userDisabledDeviceUIDs.insert(uid)
     }
 
-    /// Check if a device is enabled for monitoring
-    func isDeviceEnabled(uid: String) -> Bool {
-        return !userDisabledDeviceUIDs.contains(uid)
-    }
-
     /// Returns structured debug info for display in UI
     func getDebugInfo() -> DebugInfo {
-        let devices = getAllInputDevices()
-        let deviceInfos = devices.map { deviceID in
-            let name = getDeviceName(deviceID)
-            let uid = getDeviceUID(deviceID)
-            let transportType = getDeviceTransportType(deviceID)
-            let transportName = getTransportTypeName(transportType)
-            let ignoreReason = getIgnoreReason(for: deviceID)
-            let isUserDisabled = userDisabledDeviceUIDs.contains(uid)
-
-            return AudioDeviceInfo(
-                id: deviceID,
-                uid: uid,
-                name: name,
-                isRunning: isDeviceRunning(deviceID),
-                transportType: transportName,
-                isIgnored: ignoreReason != nil,
-                ignoreReason: ignoreReason,
-                isUserDisabled: isUserDisabled
-            )
-        }
+        let deviceInfos = getAllDevicesInfo()
 
         let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
         let micPermissionText: String
@@ -750,40 +739,6 @@ final class MicMonitor {
         }
 
         return lines.joined(separator: "\n")
-    }
-
-    /// Debug helper: Print all detected input devices and their status
-    func debugPrintDevices() {
-        let devices = getAllInputDevices()
-        print("=== MicMonitor Debug ===")
-        print("Input devices (\(devices.count)):")
-
-        for deviceID in devices {
-            let name = getDeviceName(deviceID)
-            let transportType = getTransportTypeName(getDeviceTransportType(deviceID))
-            let running = isDeviceRunning(deviceID)
-            let ignored = shouldIgnoreDevice(deviceID)
-            let ignoredTag = ignored ? " [IGNORED]" : ""
-            print("  - \(name) (\(transportType), ID: \(deviceID)) - Running: \(running)\(ignoredTag)")
-        }
-
-        let micActive = isAnyMicrophoneInUse()
-
-        print("Any physical mic active: \(micActive)")
-        print("Manual override: \(String(describing: manualOverride))")
-        print("Current state: \(lastKnownState ? "IN CALL" : "not in call")")
-
-        // Debouncing state
-        if let startTime = potentialCallStartTime {
-            let elapsed = Date().timeIntervalSince(startTime)
-            print("Pending call start: \(Int(elapsed))s / \(Int(callStartDelay))s needed")
-        }
-        if let endTime = potentialCallEndTime {
-            let elapsed = Date().timeIntervalSince(endTime)
-            print("Pending call end: \(Int(elapsed))s / \(Int(callEndDelay))s needed")
-        }
-
-        print("==========================")
     }
 
     private func getDeviceName(_ deviceID: AudioDeviceID) -> String {

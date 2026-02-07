@@ -2,9 +2,8 @@ import SwiftUI
 import AppKit
 import AVFoundation
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem?
-    private var popover: NSPopover?
     private var statusMenuItem: NSMenuItem?
 
     // State
@@ -76,18 +75,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func requestMicrophonePermission() {
         let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        #if DEBUG
         print("[MicPermission] Current status: \(status.rawValue) (0=notDetermined, 1=restricted, 2=denied, 3=authorized)")
+        #endif
 
         switch status {
         case .authorized:
+            #if DEBUG
             print("[MicPermission] Already authorized")
+            #endif
         case .notDetermined:
+            #if DEBUG
             print("[MicPermission] Not determined - requesting access...")
+            #endif
             AVCaptureDevice.requestAccess(for: .audio) { granted in
+                #if DEBUG
                 print("[MicPermission] Request result: \(granted ? "granted" : "denied")")
+                #endif
             }
         case .denied, .restricted:
+            #if DEBUG
             print("[MicPermission] Denied or restricted - showing alert")
+            #endif
             DispatchQueue.main.async {
                 let alert = NSAlert()
                 alert.messageText = "Microphone Access Required"
@@ -101,12 +110,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 }
             }
         @unknown default:
+            #if DEBUG
             print("[MicPermission] Unknown status")
+            #endif
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        NotificationCenter.default.removeObserver(self)
         ScheduleManager.shared.stop()
+    }
+
+    // MARK: - NSWindowDelegate
+
+    func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        // Nil out window references when closed to free memory
+        if window === scheduleWindow { scheduleWindow = nil }
+        else if window === statusScheduleWindow { statusScheduleWindow = nil }
+        else if window === settingsWindow { settingsWindow = nil }
+        else if window === aboutWindow { aboutWindow = nil }
+        else if window === tokenHelpWindow { tokenHelpWindow = nil }
+        else if window === debugWindow { debugWindow = nil }
+        else if window === welcomeWindow { welcomeWindow = nil }
     }
 
     // MARK: - Menu Bar Setup
@@ -134,15 +160,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // Quick actions - Presence
         menu.addItem(NSMenuItem(title: "Set Active", action: #selector(forceActive), keyEquivalent: "a"))
-        menu.addItem(NSMenuItem(title: "Set Away", action: #selector(forceAway), keyEquivalent: "w"))
+        let awayItem = NSMenuItem(title: "Set Away", action: #selector(forceAway), keyEquivalent: "W")
+        awayItem.keyEquivalentModifierMask = [.command, .shift]  // Cmd+Shift+W (avoid Cmd+W close conflict)
+        menu.addItem(awayItem)
         menu.addItem(NSMenuItem(title: "Resume Schedule", action: #selector(resumeSchedule), keyEquivalent: "r"))
 
         menu.addItem(NSMenuItem.separator())
 
         // Quick actions - Call Override
-        menu.addItem(NSMenuItem(title: "Set In Call", action: #selector(setInCall), keyEquivalent: "m"))
-        let clearInCallItem = NSMenuItem(title: "Clear In Call", action: #selector(clearInCall), keyEquivalent: "M")
-        clearInCallItem.keyEquivalentModifierMask = [.command, .shift]
+        menu.addItem(NSMenuItem(title: "Set In Call", action: #selector(setInCall), keyEquivalent: "i"))  // Cmd+I (avoid Cmd+M minimize conflict)
+        let clearInCallItem = NSMenuItem(title: "Clear In Call", action: #selector(clearInCall), keyEquivalent: "I")
+        clearInCallItem.keyEquivalentModifierMask = [.command, .shift]  // Cmd+Shift+I
         menu.addItem(clearInCallItem)
 
         menu.addItem(NSMenuItem.separator())
@@ -264,11 +292,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             scheduleWindow?.title = "Edit Schedule"
             scheduleWindow?.setContentSize(NSSize(width: 500, height: 450))
             scheduleWindow?.styleMask = [.titled, .closable, .resizable]
+            scheduleWindow?.delegate = self
             scheduleWindow?.center()
         }
 
         scheduleWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 
     @objc private func openStatusSchedule() {
@@ -280,11 +309,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             statusScheduleWindow?.title = "Scheduled Statuses"
             statusScheduleWindow?.setContentSize(NSSize(width: 520, height: 450))
             statusScheduleWindow?.styleMask = [.titled, .closable, .resizable]
+            statusScheduleWindow?.delegate = self
             statusScheduleWindow?.center()
         }
 
         statusScheduleWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 
     @objc private func openSettings() {
@@ -296,11 +326,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             settingsWindow?.title = "Settings"
             settingsWindow?.setContentSize(NSSize(width: 450, height: 520))
             settingsWindow?.styleMask = [.titled, .closable]
+            settingsWindow?.delegate = self
             settingsWindow?.center()
         }
 
         settingsWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 
     @objc private func openAbout() {
@@ -312,11 +343,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             aboutWindow?.title = "About Slack Presence"
             aboutWindow?.setContentSize(NSSize(width: 280, height: 300))
             aboutWindow?.styleMask = [.titled, .closable]
+            aboutWindow?.delegate = self
             aboutWindow?.center()
         }
 
         aboutWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 
     @objc private func openTokenHelp() {
@@ -328,11 +360,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             tokenHelpWindow?.title = "Slack Credentials Setup"
             tokenHelpWindow?.setContentSize(NSSize(width: 460, height: 600))
             tokenHelpWindow?.styleMask = [.titled, .closable]
+            tokenHelpWindow?.delegate = self
             tokenHelpWindow?.center()
         }
 
         tokenHelpWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 
     @objc private func handleIconUpdateNotification() {
@@ -354,11 +387,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             welcomeWindow?.title = "Welcome to SlackPresence"
             welcomeWindow?.setContentSize(NSSize(width: 520, height: 650))
             welcomeWindow?.styleMask = [.titled, .closable]
+            welcomeWindow?.delegate = self
             welcomeWindow?.center()
         }
 
         welcomeWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 
     @objc private func debugMicPermission() {
@@ -370,11 +404,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             debugWindow?.title = "Debug Info"
             debugWindow?.setContentSize(NSSize(width: 380, height: 500))
             debugWindow?.styleMask = [.titled, .closable, .resizable]
+            debugWindow?.delegate = self
             debugWindow?.center()
         }
 
         debugWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 
     @objc private func quit() {

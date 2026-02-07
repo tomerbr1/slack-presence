@@ -169,9 +169,6 @@ struct DayScheduleEditor: View {
     let dayName: String
     @Binding var schedule: DaySchedule
 
-    @State private var startDate: Date = Date()
-    @State private var endDate: Date = Date()
-
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Toggle(isOn: $schedule.enabled) {

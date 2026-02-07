@@ -19,6 +19,7 @@ final class ScheduleManager {
     private var appState: AppState?
     private var configState: ConfigState?
 
+    private let stateLock = NSLock()
     private var lastAppliedPresence: SlackPresence?
     private var lastCallState: Bool = false
     private var lastAppliedScheduledStatus: ScheduledStatus?
@@ -135,15 +136,16 @@ final class ScheduleManager {
         }
 
         // Handle presence change
-        if targetPresence != lastAppliedPresence {
+        let previousPresence = stateLock.withLock { lastAppliedPresence }
+        if targetPresence != previousPresence {
             do {
                 try await slackClient.setPresence(targetPresence)
-                lastAppliedPresence = targetPresence
+                stateLock.withLock { lastAppliedPresence = targetPresence }
 
                 // Handle DND when going away
                 if targetPresence == .away && configState.pauseNotificationsWhenAway {
                     await handleDNDForAway(entering: true)
-                } else if targetPresence == .active && dndWasSetByUs {
+                } else if targetPresence == .active && stateLock.withLock({ dndWasSetByUs }) {
                     await handleDNDForAway(entering: false)
                 }
 
@@ -202,7 +204,7 @@ final class ScheduleManager {
             if minutesUntilActive > 0 {
                 do {
                     try await slackClient.pauseNotifications(minutes: minutesUntilActive)
-                    dndWasSetByUs = true
+                    stateLock.withLock { dndWasSetByUs = true }
                     logger.info("Paused notifications for \(minutesUntilActive) minutes")
                 } catch {
                     logger.error("Failed to pause notifications: \(error.localizedDescription)")
@@ -212,7 +214,7 @@ final class ScheduleManager {
             // Resume notifications
             do {
                 try await slackClient.resumeNotifications()
-                dndWasSetByUs = false
+                stateLock.withLock { dndWasSetByUs = false }
                 logger.info("Resumed notifications")
             } catch {
                 logger.error("Failed to resume notifications: \(error.localizedDescription)")
@@ -271,7 +273,8 @@ final class ScheduleManager {
         let activeStatus = configState.scheduledStatuses.first { $0.isActiveNow() }
 
         // Check if status changed
-        if activeStatus?.id != lastAppliedScheduledStatus?.id {
+        let previousStatusId = stateLock.withLock { lastAppliedScheduledStatus?.id }
+        if activeStatus?.id != previousStatusId {
             if let status = activeStatus {
                 // Apply new scheduled status
                 do {
@@ -281,7 +284,7 @@ final class ScheduleManager {
                         expiration: 0
                     )
                     try await slackClient.setStatus(slackStatus)
-                    lastAppliedScheduledStatus = status
+                    stateLock.withLock { lastAppliedScheduledStatus = status }
 
                     await MainActor.run {
                         configState.activeScheduledStatus = status
@@ -292,11 +295,11 @@ final class ScheduleManager {
                         appState.setError("Failed to set scheduled status: \(error.localizedDescription)")
                     }
                 }
-            } else if lastAppliedScheduledStatus != nil {
+            } else if previousStatusId != nil {
                 // Clear status (scheduled status ended)
                 do {
                     try await slackClient.clearStatus()
-                    lastAppliedScheduledStatus = nil
+                    stateLock.withLock { lastAppliedScheduledStatus = nil }
 
                     await MainActor.run {
                         configState.activeScheduledStatus = nil
@@ -354,7 +357,8 @@ final class ScheduleManager {
             NotificationCenter.default.post(name: .updateMenuBarIcon, object: nil)
         }
 
-        if inCall && !lastCallState {
+        let wasInCall = stateLock.withLock { lastCallState }
+        if inCall && !wasInCall {
             // Started a call - set status
             Task {
                 do {
@@ -368,7 +372,7 @@ final class ScheduleManager {
                     }
                 }
             }
-        } else if !inCall && lastCallState {
+        } else if !inCall && wasInCall {
             // Ended a call - clear status
             Task {
                 do {
@@ -384,7 +388,7 @@ final class ScheduleManager {
             }
         }
 
-        lastCallState = inCall
+        stateLock.withLock { lastCallState = inCall }
     }
 
     // MARK: - Manual Call Override
@@ -415,7 +419,7 @@ final class ScheduleManager {
             }
         }
 
-        lastCallState = true
+        stateLock.withLock { lastCallState = true }
     }
 
     func clearManualInCall() {
@@ -423,7 +427,7 @@ final class ScheduleManager {
 
         // Force clear and suppress auto-detection for 30 seconds
         micMonitor.forceClearCall()
-        lastCallState = false
+        stateLock.withLock { lastCallState = false }
 
         // Immediately update UI
         Task { @MainActor in
@@ -460,7 +464,7 @@ final class ScheduleManager {
 
         do {
             try await slackClient.setPresence(.active)
-            lastAppliedPresence = .active
+            stateLock.withLock { lastAppliedPresence = .active }
             await MainActor.run {
                 appState.updateStatus("Forced Active")
             }
@@ -482,7 +486,7 @@ final class ScheduleManager {
 
         do {
             try await slackClient.setPresence(.away)
-            lastAppliedPresence = .away
+            stateLock.withLock { lastAppliedPresence = .away }
             await MainActor.run {
                 appState.updateStatus("Forced Away")
             }

@@ -22,7 +22,7 @@ struct AboutView: View {
                 .foregroundColor(.secondary)
 
             // Version
-            Text("Version 1.1")
+            Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")")
                 .font(.caption)
                 .foregroundColor(.secondary.opacity(0.7))
 

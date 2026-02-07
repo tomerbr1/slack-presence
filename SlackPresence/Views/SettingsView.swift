@@ -56,6 +56,7 @@ struct ConnectionTab: View {
     @State private var cookie: String = ""
     @State private var isTesting: Bool = false
     @State private var connectionStatus: ConnectionStatus = .unknown
+    @State private var errorMessage: String?
 
     enum ConnectionStatus {
         case unknown, testing, connected, failed
@@ -163,7 +164,7 @@ struct ConnectionTab: View {
         case .unknown: return "Enter your Slack credentials"
         case .testing: return "Verifying with Slack..."
         case .connected: return "Ready to manage your presence"
-        case .failed: return "Check your token and cookie"
+        case .failed: return errorMessage ?? "Check your token and cookie"
         }
     }
 
@@ -190,33 +191,67 @@ struct ConnectionTab: View {
 
     private func saveCredentials() {
         let creds = SlackCredentials(token: token, cookie: cookie)
+        errorMessage = nil
         do {
             try ConfigManager.shared.saveCredentials(creds)
             SlackClient.shared.updateCredentials(creds)
-            appState.hasValidCredentials = true
-            connectionStatus = .connected
+            // Verify credentials work before marking as connected
+            connectionStatus = .testing
+            isTesting = true
+            Task {
+                do {
+                    let success = try await SlackClient.shared.testConnection(with: creds)
+                    await MainActor.run {
+                        if success {
+                            appState.hasValidCredentials = true
+                            connectionStatus = .connected
+                            errorMessage = nil
+                        } else {
+                            appState.hasValidCredentials = false
+                            connectionStatus = .failed
+                            errorMessage = "Invalid credentials"
+                        }
+                        isTesting = false
+                    }
+                } catch {
+                    await MainActor.run {
+                        appState.hasValidCredentials = false
+                        connectionStatus = .failed
+                        errorMessage = error.localizedDescription
+                        isTesting = false
+                    }
+                }
+            }
         } catch {
             connectionStatus = .failed
+            errorMessage = error.localizedDescription
         }
     }
 
     private func testConnection() {
         connectionStatus = .testing
         isTesting = true
+        errorMessage = nil
 
         let creds = SlackCredentials(token: token, cookie: cookie)
-        SlackClient.shared.updateCredentials(creds)
 
         Task {
             do {
-                let success = try await SlackClient.shared.testConnection()
+                let success = try await SlackClient.shared.testConnection(with: creds)
                 await MainActor.run {
-                    connectionStatus = success ? .connected : .failed
+                    if success {
+                        connectionStatus = .connected
+                        errorMessage = nil
+                    } else {
+                        connectionStatus = .failed
+                        errorMessage = "Invalid credentials"
+                    }
                     isTesting = false
                 }
             } catch {
                 await MainActor.run {
                     connectionStatus = .failed
+                    errorMessage = error.localizedDescription
                     isTesting = false
                 }
             }
@@ -231,8 +266,6 @@ struct BehaviorTab: View {
     @Bindable var configState: ConfigState
 
     @State private var isRefreshingMic: Bool = false
-    @State private var launchAtLogin: Bool = SMAppService.mainApp.status == .enabled
-    @State private var loginItemMessage: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -338,38 +371,7 @@ struct BehaviorTab: View {
                         .font(.headline)
                 }
 
-                Toggle("Launch at login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, newValue in
-                        do {
-                            if newValue {
-                                try SMAppService.mainApp.register()
-                                loginItemMessage = "Added to Login Items"
-                            } else {
-                                try SMAppService.mainApp.unregister()
-                                loginItemMessage = "Removed from Login Items"
-                            }
-                            // Clear message after 3 seconds
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                loginItemMessage = nil
-                            }
-                        } catch {
-                            // Revert toggle on failure
-                            launchAtLogin = !newValue
-                            loginItemMessage = "Failed: \(error.localizedDescription)"
-                            print("Failed to update login item: \(error)")
-                        }
-                    }
-
-                if let message = loginItemMessage {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundColor(message.starts(with: "Failed") ? .red : .green)
-                        .transition(.opacity)
-                } else {
-                    Text("Automatically start SlackPresence when you log in")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                LaunchAtLoginToggle(showIcon: false)
             }
 
             Divider()
@@ -471,7 +473,7 @@ struct DevicesTab: View {
             ScrollView {
                 VStack(spacing: 8) {
                     ForEach(devices) { device in
-                        DeviceRow(
+                        SharedDeviceRow(
                             device: device,
                             isEnabled: !configState.disabledDeviceUIDs.contains(device.uid),
                             onToggle: { enabled in
@@ -536,87 +538,6 @@ struct DevicesTab: View {
         ScheduleManager.shared.saveConfig()
         // Refresh to update display
         devices = MicMonitor.shared.getAllDevicesInfo()
-    }
-}
-
-// MARK: - Device Row
-
-struct DeviceRow: View {
-    let device: AudioDeviceInfo
-    let isEnabled: Bool
-    let onToggle: (Bool) -> Void
-
-    var body: some View {
-        HStack(spacing: 12) {
-            // Status indicator
-            Circle()
-                .fill(statusColor)
-                .frame(width: 10, height: 10)
-
-            // Device info
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(device.name)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    Text("(\(device.transportType))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                if device.isIgnored, let reason = device.ignoreReason, !device.isUserDisabled {
-                    Text(reason)
-                        .font(.caption2)
-                        .foregroundColor(.orange)
-                }
-
-                if device.isRunning {
-                    Text("Currently active")
-                        .font(.caption2)
-                        .foregroundColor(.green)
-                }
-            }
-
-            Spacer()
-
-            // Toggle (only for non-auto-ignored devices, or user-disabled)
-            if !device.isIgnored || device.isUserDisabled {
-                Toggle("", isOn: Binding(
-                    get: { isEnabled },
-                    set: { onToggle($0) }
-                ))
-                .toggleStyle(.switch)
-                .labelsHidden()
-            } else {
-                Text("Auto")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.orange.opacity(0.1))
-                    .cornerRadius(4)
-            }
-        }
-        .padding(12)
-        .background(backgroundColor)
-        .cornerRadius(8)
-    }
-
-    private var statusColor: Color {
-        if device.isIgnored && !device.isUserDisabled {
-            return Color.orange.opacity(0.6)
-        }
-        if !isEnabled {
-            return Color.gray.opacity(0.3)
-        }
-        return device.isRunning ? Color.green : Color.gray.opacity(0.4)
-    }
-
-    private var backgroundColor: Color {
-        if !isEnabled {
-            return Color(.controlBackgroundColor).opacity(0.3)
-        }
-        return Color(.controlBackgroundColor).opacity(0.5)
     }
 }
 

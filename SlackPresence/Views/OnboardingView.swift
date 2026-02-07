@@ -55,7 +55,7 @@ struct OnboardingView: View {
                 case .schedule:
                     ScheduleStepView(configState: configState)
                 case .finish:
-                    FinishStepView(dontShowAgain: $dontShowAgain)
+                    FinishStepView(configState: configState, dontShowAgain: $dontShowAgain)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -723,6 +723,7 @@ struct ScheduleStepView: View {
 // MARK: - Step 6: Finish
 
 struct FinishStepView: View {
+    @Bindable var configState: ConfigState
     @Binding var dontShowAgain: Bool
     @State private var checkmarkScale: CGFloat = 0
 
@@ -751,9 +752,26 @@ struct FinishStepView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
-            // Launch at Login - Important setting
-            LaunchAtLoginToggle(showIcon: true, backgroundColor: Color.blue.opacity(0.1))
-                .padding(.horizontal, 40)
+            // Important settings
+            VStack(spacing: 8) {
+                LaunchAtLoginToggle(showIcon: true, backgroundColor: Color.blue.opacity(0.1))
+
+                HStack(spacing: 12) {
+                    Image(systemName: "bell.slash.fill")
+                        .font(.title3)
+                        .foregroundColor(.orange)
+                        .frame(width: 28)
+
+                    Toggle("Pause notifications during away hours", isOn: $configState.pauseNotificationsWhenAway)
+                        .onChange(of: configState.pauseNotificationsWhenAway) { _, newValue in
+                            ScheduleManager.shared.updatePauseNotifications(enabled: newValue)
+                        }
+                }
+                .padding(12)
+                .background(Color.orange.opacity(0.1))
+                .cornerRadius(10)
+            }
+            .padding(.horizontal, 40)
 
             // Quick reference cards
             VStack(spacing: 10) {

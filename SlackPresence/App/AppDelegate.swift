@@ -20,9 +20,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     private var welcomeWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Hide from dock
-        NSApp.setActivationPolicy(.accessory)
-
         // Set up menu bar
         setupMenuBar()
 
@@ -133,6 +130,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         else if window === tokenHelpWindow { tokenHelpWindow = nil }
         else if window === debugWindow { debugWindow = nil }
         else if window === welcomeWindow { welcomeWindow = nil }
+
+        // Hide from Dock when no windows are open
+        if !hasVisibleWindows {
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+
+    private var hasVisibleWindows: Bool {
+        [scheduleWindow, statusScheduleWindow, settingsWindow,
+         aboutWindow, tokenHelpWindow, debugWindow, welcomeWindow].contains { $0 != nil }
+    }
+
+    private func showWindow(_ window: NSWindow?) {
+        NSApp.setActivationPolicy(.regular)
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate()
     }
 
     // MARK: - Menu Bar Setup
@@ -296,8 +309,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             scheduleWindow?.center()
         }
 
-        scheduleWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        showWindow(scheduleWindow)
     }
 
     @objc private func openStatusSchedule() {
@@ -313,8 +325,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             statusScheduleWindow?.center()
         }
 
-        statusScheduleWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        showWindow(statusScheduleWindow)
     }
 
     @objc private func openSettings() {
@@ -330,8 +341,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             settingsWindow?.center()
         }
 
-        settingsWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        showWindow(settingsWindow)
     }
 
     @objc private func openAbout() {
@@ -347,8 +357,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             aboutWindow?.center()
         }
 
-        aboutWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        showWindow(aboutWindow)
     }
 
     @objc private func openTokenHelp() {
@@ -364,8 +373,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             tokenHelpWindow?.center()
         }
 
-        tokenHelpWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        showWindow(tokenHelpWindow)
     }
 
     @objc private func handleIconUpdateNotification() {
@@ -391,8 +399,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             welcomeWindow?.center()
         }
 
-        welcomeWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        showWindow(welcomeWindow)
     }
 
     @objc private func debugMicPermission() {
@@ -408,8 +415,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             debugWindow?.center()
         }
 
-        debugWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        showWindow(debugWindow)
     }
 
     @objc private func quit() {

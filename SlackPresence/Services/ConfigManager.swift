@@ -27,7 +27,7 @@ struct AppConfig: Codable {
     init() {
         schedules = WeekSchedule()
         callDetectionEnabled = true
-        pauseNotificationsWhenAway = true
+        pauseNotificationsWhenAway = false
         scheduledStatuses = []
         callStartDelay = 10
         callEndDelay = 3

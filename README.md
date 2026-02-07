@@ -68,10 +68,9 @@ On first run, a welcome guide walks you through:
 
 1. **Welcome** - Feature overview
 2. **Connect to Slack** - Enter your xoxc token and d cookie (with test connection)
-3. **Permissions** - Grant microphone access for call detection
-4. **Device Selection** - Choose which microphones to monitor
-5. **Schedule** - Review your work hours
-6. **Finish** - Enable Launch at Login, start using the app
+3. **Device Selection** - Choose which microphones to monitor
+4. **Schedule** - Review your work hours
+5. **Finish** - Enable Launch at Login, configure DND, start using the app
 
 You can reopen the guide anytime from the menu bar → "Show Welcome Guide".
 
@@ -114,10 +113,10 @@ The app will notify you if the token stops working - just repeat the steps above
 
 Click the menu bar icon to see:
 - Current status (Active/Away/In Call)
-- Quick toggles: Set Active (Cmd+A), Set Away (Cmd+W)
+- Quick toggles: Set Active (Cmd+A), Set Away (Cmd+Shift+W)
 - Resume Schedule (Cmd+R) - clears manual override
-- Set In Call (Cmd+M) - manually mark yourself as in a call
-- Clear In Call (Cmd+Shift+M) - return to auto-detection
+- Set In Call (Cmd+I) - manually mark yourself as in a call
+- Clear In Call (Cmd+Shift+I) - return to auto-detection
 - Edit Schedule... (Cmd+,)
 - Scheduled Statuses... (Cmd+T)
 - Settings... (Cmd+S)
@@ -220,7 +219,6 @@ Credentials are stored securely in macOS Keychain, not in the config file.
 - Use "Test Connection" button to verify
 
 ### Call detection not working
-- Grant microphone permissions in System Settings → Privacy & Security → Microphone
 - Open Debug window from menu to see mic status and device list
 - Check that your microphone shows as "Active" when in a call
 - Adjust call start/end delays in Settings if detection is too sensitive or slow
@@ -234,7 +232,7 @@ Credentials are stored securely in macOS Keychain, not in the config file.
 ## Privacy
 
 - All credentials stored in macOS Keychain (encrypted)
-- **Microphone access is never recorded** - only checks if the mic is active, never listens to audio
+- **No microphone permission needed** - uses CoreAudio hardware queries to detect mic activity, never captures audio
 - No data sent to external servers
 - Communicates only with Slack's servers using your token
 - Config file contains only schedule settings, no credentials
@@ -248,7 +246,7 @@ SlackPresence/
 │   ├── AppDelegate.swift           # Menu bar + window management
 │   └── Notifications.swift         # App-wide notification names
 ├── Views/
-│   ├── OnboardingView.swift        # Welcome guide (6-step wizard)
+│   ├── OnboardingView.swift        # Welcome guide (5-step wizard)
 │   ├── ScheduleEditorView.swift    # Per-day schedule UI
 │   ├── StatusScheduleEditorView.swift # Scheduled statuses editor
 │   ├── SettingsView.swift          # Token config, call detection, devices

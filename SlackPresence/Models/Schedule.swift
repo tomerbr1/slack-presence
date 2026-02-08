@@ -153,15 +153,4 @@ struct WeekSchedule: Codable, Equatable {
         default: break
         }
     }
-
-    func isActiveNow() -> Bool {
-        let now = Date()
-        let calendar = Calendar.current
-        let weekday = calendar.component(.weekday, from: now)
-        let hour = calendar.component(.hour, from: now)
-        let minute = calendar.component(.minute, from: now)
-
-        let daySchedule = schedule(for: weekday)
-        return daySchedule.isActiveAt(hour: hour, minute: minute)
-    }
 }

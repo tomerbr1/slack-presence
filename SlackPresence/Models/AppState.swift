@@ -6,7 +6,6 @@ final class AppState {
     // Current state
     var currentPresence: SlackPresence = .unknown
     var isInCall: Bool = false
-    var hasValidCredentials: Bool = false
     var isDNDActive: Bool = false
 
     // Call detection status for display
@@ -15,7 +14,6 @@ final class AppState {
 
     // Status display
     var statusText: String = "Initializing..."
-    var lastError: String?
     var lastUpdate: Date?
 
     // Override mode
@@ -66,11 +64,9 @@ final class AppState {
     func updateStatus(_ text: String) {
         statusText = text
         lastUpdate = Date()
-        lastError = nil
     }
 
     func setError(_ error: String) {
-        lastError = error
         statusText = "Error: \(error)"
     }
 
@@ -90,9 +86,6 @@ final class ConfigState {
     var callEndDelay: Int = 3     // Seconds to confirm call ended
     var disabledDeviceUIDs: Set<String> = []  // Device UIDs user has disabled
     var hasCompletedOnboarding: Bool = false
-
-    // Track current active scheduled status
-    var activeScheduledStatus: ScheduledStatus? = nil
 
     func load(from config: AppConfig) {
         schedule = config.schedules

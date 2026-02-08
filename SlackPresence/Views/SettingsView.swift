@@ -1,5 +1,4 @@
 import SwiftUI
-import ServiceManagement
 
 // MARK: - Settings View
 
@@ -192,39 +191,37 @@ struct ConnectionTab: View {
     private func saveCredentials() {
         let creds = SlackCredentials(token: token, cookie: cookie)
         errorMessage = nil
-        do {
-            try ConfigManager.shared.saveCredentials(creds)
-            SlackClient.shared.updateCredentials(creds)
-            // Verify credentials work before marking as connected
-            connectionStatus = .testing
-            isTesting = true
-            Task {
-                do {
-                    let success = try await SlackClient.shared.testConnection(with: creds)
-                    await MainActor.run {
-                        if success {
-                            appState.hasValidCredentials = true
+        connectionStatus = .testing
+        isTesting = true
+
+        // Test first, only persist on success
+        Task {
+            do {
+                let success = try await SlackClient.shared.testConnection(with: creds)
+                await MainActor.run {
+                    if success {
+                        do {
+                            try ConfigManager.shared.saveCredentials(creds)
+                            SlackClient.shared.updateCredentials(creds)
                             connectionStatus = .connected
                             errorMessage = nil
-                        } else {
-                            appState.hasValidCredentials = false
+                        } catch {
                             connectionStatus = .failed
-                            errorMessage = "Invalid credentials"
+                            errorMessage = error.localizedDescription
                         }
-                        isTesting = false
-                    }
-                } catch {
-                    await MainActor.run {
-                        appState.hasValidCredentials = false
+                    } else {
                         connectionStatus = .failed
-                        errorMessage = error.localizedDescription
-                        isTesting = false
+                        errorMessage = "Invalid credentials"
                     }
+                    isTesting = false
+                }
+            } catch {
+                await MainActor.run {
+                    connectionStatus = .failed
+                    errorMessage = error.localizedDescription
+                    isTesting = false
                 }
             }
-        } catch {
-            connectionStatus = .failed
-            errorMessage = error.localizedDescription
         }
     }
 

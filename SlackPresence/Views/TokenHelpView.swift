@@ -151,7 +151,7 @@ struct TokenHelpView: View {
             Spacer()
         }
         .padding(.horizontal, 20)
-        .padding(.top, 12)
+        .padding(.top, 24)
         .padding(.bottom, 20)
         .frame(width: 460, height: 600)
         .textSelection(.enabled)

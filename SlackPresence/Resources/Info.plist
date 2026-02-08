@@ -37,5 +37,8 @@
 
     <key>NSAppleEventsUsageDescription</key>
     <string>SlackPresence needs automation access to detect running applications.</string>
+
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
 </dict>
 </plist>

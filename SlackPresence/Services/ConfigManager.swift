@@ -133,7 +133,20 @@ final class ConfigManager {
               let cookie = loadFromKeychain(key: cookieKey) else {
             return nil
         }
-        return SlackCredentials(token: token, cookie: cookie)
+        // Clean credentials (strip whitespace and surrounding quotes)
+        let cleanedToken = cleanCredential(token)
+        let cleanedCookie = cleanCredential(cookie)
+        return SlackCredentials(token: cleanedToken, cookie: cleanedCookie)
+    }
+
+    /// Cleans credential value by trimming whitespace and surrounding quotes
+    private func cleanCredential(_ value: String) -> String {
+        var cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Remove surrounding quotes if present
+        if cleaned.hasPrefix("\"") && cleaned.hasSuffix("\"") && cleaned.count > 1 {
+            cleaned = String(cleaned.dropFirst().dropLast())
+        }
+        return cleaned
     }
 
     // MARK: - Keychain Helpers

@@ -120,9 +120,10 @@ struct TokenHelpView: View {
                 stepNumber: 3,
                 title: "Get Session Cookie (d)",
                 instructions: [
-                    .textWithLink(prefix: "In DevTools → Cookies → ", linkText: "app.slack.com", url: "https://app.slack.com", suffix: ""),
+                    .text("In DevTools, go to Application tab"),
+                    .text("Under Storage → Cookies → https://app.slack.com"),
                     .text("Find the cookie named 'd'"),
-                    .text("Copy its value (long string)")
+                    .text("Double-click its Value to select, then copy")
                 ]
             )
 

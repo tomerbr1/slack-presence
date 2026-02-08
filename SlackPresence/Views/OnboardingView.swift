@@ -1,4 +1,5 @@
 import SwiftUI
+import ServiceManagement
 
 // MARK: - Onboarding Step Enum
 
@@ -102,7 +103,7 @@ struct OnboardingView: View {
             }
             .padding(20)
         }
-        .frame(width: 520, height: 650)
+        .frame(width: 520, height: 720)
     }
 
     private func completeOnboarding() {
@@ -363,40 +364,52 @@ struct CredentialsStepView: View {
         }
     }
 
-    private func saveCredentials() {
-        let creds = SlackCredentials(token: token, cookie: cookie)
-        errorMessage = nil
-        connectionStatus = .testing
-        isTesting = true
+    /// Cleans credential value by trimming whitespace and surrounding quotes
+    private func cleanCredential(_ value: String) -> String {
+        var cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Remove surrounding quotes if present
+        if cleaned.hasPrefix("\"") && cleaned.hasSuffix("\"") && cleaned.count > 1 {
+            cleaned = String(cleaned.dropFirst().dropLast())
+        }
+        return cleaned
+    }
 
-        // Test first, only persist on success
-        Task {
-            do {
-                let success = try await SlackClient.shared.testConnection(with: creds)
-                await MainActor.run {
-                    if success {
-                        do {
-                            try ConfigManager.shared.saveCredentials(creds)
-                            SlackClient.shared.updateCredentials(creds)
+    private func saveCredentials() {
+        let creds = SlackCredentials(token: cleanCredential(token), cookie: cleanCredential(cookie))
+        errorMessage = nil
+        do {
+            try ConfigManager.shared.saveCredentials(creds)
+            SlackClient.shared.updateCredentials(creds)
+            // Verify credentials work before marking as connected
+            connectionStatus = .testing
+            isTesting = true
+            Task {
+                do {
+                    let success = try await SlackClient.shared.testConnection(with: creds)
+                    await MainActor.run {
+                        if success {
+                            appState.hasValidCredentials = true
                             connectionStatus = .connected
                             errorMessage = nil
-                        } catch {
+                        } else {
+                            appState.hasValidCredentials = false
                             connectionStatus = .failed
-                            errorMessage = error.localizedDescription
+                            errorMessage = "Invalid credentials"
                         }
-                    } else {
-                        connectionStatus = .failed
-                        errorMessage = "Invalid credentials"
+                        isTesting = false
                     }
-                    isTesting = false
-                }
-            } catch {
-                await MainActor.run {
-                    connectionStatus = .failed
-                    errorMessage = error.localizedDescription
-                    isTesting = false
+                } catch {
+                    await MainActor.run {
+                        appState.hasValidCredentials = false
+                        connectionStatus = .failed
+                        errorMessage = error.localizedDescription
+                        isTesting = false
+                    }
                 }
             }
+        } catch {
+            connectionStatus = .failed
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -405,7 +418,7 @@ struct CredentialsStepView: View {
         isTesting = true
         errorMessage = nil
 
-        let creds = SlackCredentials(token: token, cookie: cookie)
+        let creds = SlackCredentials(token: cleanCredential(token), cookie: cleanCredential(cookie))
 
         Task {
             do {

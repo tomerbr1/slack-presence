@@ -19,6 +19,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     private var welcomeWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Start as menu bar only app (no Dock icon)
+        NSApp.setActivationPolicy(.accessory)
+
         // Set up menu bar
         setupMenuBar()
 

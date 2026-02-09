@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 import os.log
 
@@ -25,7 +24,6 @@ final class ScheduleManager {
     private var lastCallState: Bool = false
     private var lastAppliedScheduledStatus: ScheduledStatus?
     private var dndWasSetByUs: Bool = false
-    private var isCheckingInProgress: Bool = false
 
     private init() {}
 
@@ -42,6 +40,9 @@ final class ScheduleManager {
         // Load config
         let config = configManager.loadConfig()
         configState.load(from: config)
+
+        // Check credentials
+        appState.hasValidCredentials = slackClient.hasValidCredentials
 
         // Set up call monitoring callback
         micMonitor.onCallStateChanged = { [weak self] inCall in
@@ -64,17 +65,6 @@ final class ScheduleManager {
         }
         networkMonitor.start()
 
-        // Sync state after system wake (sleep/wake cycle)
-        NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didWakeNotification,
-            object: nil,
-            queue: nil
-        ) { [weak self] _ in
-            Task {
-                await self?.syncAfterWake()
-            }
-        }
-
         // Check immediately - sync actual presence first for accurate icon
         Task {
             await syncActualPresence()  // Get real status first
@@ -89,13 +79,6 @@ final class ScheduleManager {
         }
 
         appState.updateStatus("Started")
-    }
-
-    /// Sync state after system wake from sleep
-    private func syncAfterWake() async {
-        logger.info("System woke from sleep - syncing state")
-        await syncActualPresence()
-        await checkAndApply()
     }
 
     /// Sync state after network connectivity is restored
@@ -118,7 +101,6 @@ final class ScheduleManager {
         timer = nil
         micMonitor.stopMonitoring()
         networkMonitor.stop()
-        NSWorkspace.shared.notificationCenter.removeObserver(self)
         isRunning = false
     }
 
@@ -126,15 +108,6 @@ final class ScheduleManager {
 
     private func checkAndApply() async {
         guard let appState = appState, let configState = configState else { return }
-
-        // Serialize: skip if another checkAndApply is already running
-        let alreadyRunning = stateLock.withLock {
-            if isCheckingInProgress { return true }
-            isCheckingInProgress = true
-            return false
-        }
-        if alreadyRunning { return }
-        defer { stateLock.withLock { isCheckingInProgress = false } }
 
         // Check DND status
         await checkDNDStatus()
@@ -314,6 +287,7 @@ final class ScheduleManager {
                     stateLock.withLock { lastAppliedScheduledStatus = status }
 
                     await MainActor.run {
+                        configState.activeScheduledStatus = status
                         appState.updateStatus("Status: \(status.text)")
                     }
                 } catch {
@@ -328,6 +302,7 @@ final class ScheduleManager {
                     stateLock.withLock { lastAppliedScheduledStatus = nil }
 
                     await MainActor.run {
+                        configState.activeScheduledStatus = nil
                         appState.updateStatus("Status cleared")
                     }
                 } catch {

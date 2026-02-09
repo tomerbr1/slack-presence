@@ -275,6 +275,11 @@ final class SlackClient {
 
     // MARK: - Test Connection
 
+    func testConnection() async throws -> Bool {
+        guard let creds = credentials else { return false }
+        return try await testConnection(with: creds)
+    }
+
     /// Test connection with specific credentials without mutating shared state
     func testConnection(with creds: SlackCredentials) async throws -> Bool {
         guard creds.isValid else { return false }

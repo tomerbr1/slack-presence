@@ -181,6 +181,13 @@ final class MicMonitor {
         return applyDebouncing(rawInCall: micActive)
     }
 
+    /// Thread-safe wrapper for isInCall
+    func isInCall() -> Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return isInCallLocked()
+    }
+
     /// Apply debouncing to prevent flickering state changes
     private func applyDebouncing(rawInCall: Bool) -> Bool {
         let now = Date()

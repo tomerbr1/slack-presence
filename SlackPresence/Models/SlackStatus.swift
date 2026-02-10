@@ -30,6 +30,14 @@ struct SlackStatusEmoji: Equatable {
         text: "",
         expiration: 0
     )
+
+    static func meeting(emoji: String, text: String, endDate: Date) -> SlackStatusEmoji {
+        SlackStatusEmoji(
+            emoji: emoji,
+            text: text,
+            expiration: Int(endDate.timeIntervalSince1970)
+        )
+    }
 }
 
 struct SlackCredentials: Codable {

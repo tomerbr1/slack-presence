@@ -12,6 +12,7 @@ struct SettingsView: View {
     enum SettingsTab: String, CaseIterable {
         case connection = "Connection"
         case behavior = "Behavior"
+        case calendar = "Calendar"
         case devices = "Devices"
     }
 
@@ -37,6 +38,8 @@ struct SettingsView: View {
                     ConnectionTab(appState: appState)
                 case .behavior:
                     BehaviorTab(appState: appState, configState: configState)
+                case .calendar:
+                    CalendarSettingsContent(configState: configState)
                 case .devices:
                     DevicesTab(configState: configState)
                 }

@@ -17,6 +17,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     private var tokenHelpWindow: NSWindow?
     private var debugWindow: NSWindow?
     private var welcomeWindow: NSWindow?
+    private var troubleshootingWindow: NSWindow?
+
+    // Menu items that need state updates
+    private var callDetectionMenuItem: NSMenuItem?
+    private var calendarSyncMenuItem: NSMenuItem?
+    private var syncCalendarNowMenuItem: NSMenuItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Start as menu bar only app (no Dock icon)
@@ -56,6 +62,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             name: .openWelcome,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(openTroubleshooting),
+            name: .openTroubleshooting,
+            object: nil
+        )
 
         // Start the schedule manager
         ScheduleManager.shared.start(appState: appState, configState: configState)
@@ -86,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         else if window === tokenHelpWindow { tokenHelpWindow = nil }
         else if window === debugWindow { debugWindow = nil }
         else if window === welcomeWindow { welcomeWindow = nil }
+        else if window === troubleshootingWindow { troubleshootingWindow = nil }
 
         // Hide from Dock when no windows are open
         if !hasVisibleWindows {
@@ -95,7 +108,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     private var hasVisibleWindows: Bool {
         [scheduleWindow, statusScheduleWindow, settingsWindow,
-         aboutWindow, tokenHelpWindow, debugWindow, welcomeWindow].contains { $0 != nil }
+         aboutWindow, tokenHelpWindow, debugWindow, welcomeWindow,
+         troubleshootingWindow].contains { $0 != nil }
     }
 
     private func showWindow(_ window: NSWindow?) {
@@ -144,6 +158,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
         menu.addItem(NSMenuItem.separator())
 
+        // Meeting Override
+        menu.addItem(NSMenuItem(title: "Set In Meeting", action: #selector(setInMeeting), keyEquivalent: "m"))
+        let clearMeetingItem = NSMenuItem(title: "Clear Meeting", action: #selector(clearMeeting), keyEquivalent: "M")
+        clearMeetingItem.keyEquivalentModifierMask = [.command, .shift]
+        menu.addItem(clearMeetingItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         // Windows
         menu.addItem(NSMenuItem(title: "Edit Schedule...", action: #selector(openScheduleEditor), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "Scheduled Statuses...", action: #selector(openStatusSchedule), keyEquivalent: "t"))
@@ -151,8 +173,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
         menu.addItem(NSMenuItem.separator())
 
+        // Feature toggles
+        callDetectionMenuItem = NSMenuItem(title: "Call Detection", action: #selector(toggleCallDetection), keyEquivalent: "")
+        menu.addItem(callDetectionMenuItem!)
+
+        calendarSyncMenuItem = NSMenuItem(title: "Calendar Sync", action: #selector(toggleCalendarSync), keyEquivalent: "")
+        menu.addItem(calendarSyncMenuItem!)
+
+        syncCalendarNowMenuItem = NSMenuItem(title: "Sync Calendar Now", action: #selector(syncCalendarNow), keyEquivalent: "S")
+        syncCalendarNowMenuItem!.keyEquivalentModifierMask = [.command, .shift]
+        menu.addItem(syncCalendarNowMenuItem!)
+
+        menu.addItem(NSMenuItem.separator())
+
         // Help section
         menu.addItem(NSMenuItem(title: "Show Welcome Guide", action: #selector(openWelcome), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Troubleshooting", action: #selector(openTroubleshooting), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Debug Info", action: #selector(debugMicPermission), keyEquivalent: "d"))
         menu.addItem(NSMenuItem(title: "About Slack Presence", action: #selector(openAbout), keyEquivalent: ""))
 
@@ -176,6 +212,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             _ = appState.currentPresence
             _ = appState.manualOverride
             _ = appState.isInCall
+            _ = appState.isInMeeting
             _ = appState.isDNDActive
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
@@ -250,6 +287,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     @objc private func clearInCall() {
         ScheduleManager.shared.clearManualInCall()
+    }
+
+    @objc private func setInMeeting() {
+        ScheduleManager.shared.setManualInMeeting()
+    }
+
+    @objc private func clearMeeting() {
+        ScheduleManager.shared.clearManualMeeting()
+    }
+
+    @objc private func toggleCallDetection() {
+        let newValue = !configState.callDetectionEnabled
+        ScheduleManager.shared.updateCallDetection(enabled: newValue)
+        ScheduleManager.shared.saveConfig()
+    }
+
+    @objc private func toggleCalendarSync() {
+        let newValue = !configState.calendarSyncEnabled
+        ScheduleManager.shared.updateCalendarSync(enabled: newValue)
+        ScheduleManager.shared.saveConfig()
+    }
+
+    @objc private func syncCalendarNow() {
+        ScheduleManager.shared.syncCalendarNow()
+        appState.updateStatus("Calendar syncing...")
     }
 
     @objc private func openScheduleEditor() {
@@ -358,6 +420,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         showWindow(welcomeWindow)
     }
 
+    @objc private func openTroubleshooting() {
+        if troubleshootingWindow == nil {
+            let view = TroubleshootingView()
+            let hostingController = NSHostingController(rootView: view)
+
+            troubleshootingWindow = NSWindow(contentViewController: hostingController)
+            troubleshootingWindow?.title = "Troubleshooting"
+            troubleshootingWindow?.setContentSize(NSSize(width: 420, height: 500))
+            troubleshootingWindow?.styleMask = [.titled, .closable, .resizable]
+            troubleshootingWindow?.delegate = self
+            troubleshootingWindow?.center()
+        }
+
+        showWindow(troubleshootingWindow)
+    }
+
     @objc private func debugMicPermission() {
         if debugWindow == nil {
             let view = DebugView()
@@ -382,5 +460,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     func menuWillOpen(_ menu: NSMenu) {
         statusMenuItem?.title = "Status: \(appState.statusText)"
+        callDetectionMenuItem?.state = configState.callDetectionEnabled ? .on : .off
+        calendarSyncMenuItem?.state = configState.calendarSyncEnabled ? .on : .off
+        syncCalendarNowMenuItem?.isEnabled = configState.calendarSyncEnabled
     }
 }

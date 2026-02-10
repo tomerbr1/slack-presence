@@ -13,6 +13,7 @@ final class ScheduleManager {
     private let configManager = ConfigManager.shared
     private let slackClient = SlackClient.shared
     private let micMonitor = MicMonitor.shared
+    private let calendarMonitor = CalendarMonitor.shared
     private let networkMonitor = NetworkMonitor.shared
 
     // State
@@ -22,6 +23,7 @@ final class ScheduleManager {
     private let stateLock = NSLock()
     private var lastAppliedPresence: SlackPresence?
     private var lastCallState: Bool = false
+    private var lastMeetingState: Bool = false
     private var lastAppliedScheduledStatus: ScheduledStatus?
     private var dndWasSetByUs: Bool = false
 
@@ -52,6 +54,19 @@ final class ScheduleManager {
         // Start call detection if enabled
         if configState.callDetectionEnabled {
             micMonitor.startMonitoring()
+        }
+
+        // Set up calendar monitoring callback
+        calendarMonitor.onMeetingStateChanged = { [weak self] inMeeting, endDate in
+            self?.handleMeetingStateChange(inMeeting, meetingEndDate: endDate)
+        }
+
+        // Start calendar sync if enabled
+        if configState.calendarSyncEnabled {
+            calendarMonitor.selectedCalendarIDs = configState.selectedCalendarIDs
+            calendarMonitor.eventFetchInterval = TimeInterval(configState.calendarSyncIntervalMinutes * 60)
+            Task { await calendarMonitor.requestAccess() }
+            calendarMonitor.startMonitoring()
         }
 
         // Setup connectivity restored handler
@@ -100,6 +115,7 @@ final class ScheduleManager {
         timer?.invalidate()
         timer = nil
         micMonitor.stopMonitoring()
+        calendarMonitor.stopMonitoring()
         networkMonitor.stop()
         isRunning = false
     }
@@ -112,10 +128,9 @@ final class ScheduleManager {
         // Check DND status
         await checkDNDStatus()
 
-        // Skip if in call (call status takes priority)
-        if appState.isInCall {
-            return
-        }
+        // Skip if in meeting or call (auto-detection takes priority over schedule)
+        if appState.isInMeeting { return }
+        if appState.isInCall { return }
 
         // Determine target presence (nil means schedule disabled - don't manage)
         guard let targetPresence = determineTargetPresence() else {
@@ -357,6 +372,13 @@ final class ScheduleManager {
             NotificationCenter.default.post(name: .updateMenuBarIcon, object: nil)
         }
 
+        // Don't override auto-meeting with auto-call
+        // Manual call override ("Set In Call") DOES override - handled in setManualInCall
+        if appState.isInMeeting && appState.manualInCallOverride != true {
+            stateLock.withLock { lastCallState = inCall }
+            return
+        }
+
         let wasInCall = stateLock.withLock { lastCallState }
         if inCall && !wasInCall {
             // Started a call - set status
@@ -391,6 +413,94 @@ final class ScheduleManager {
         stateLock.withLock { lastCallState = inCall }
     }
 
+    // MARK: - Meeting Handling
+
+    private func handleMeetingStateChange(_ inMeeting: Bool, meetingEndDate: Date?) {
+        guard let appState = appState, let configState = configState else { return }
+
+        let meeting = calendarMonitor.getCurrentMeeting()
+        Task { @MainActor in
+            appState.isInMeeting = inMeeting
+            appState.currentMeetingTitle = meeting?.title
+            NotificationCenter.default.post(name: .updateMenuBarIcon, object: nil)
+        }
+
+        let wasMeeting = stateLock.withLock { lastMeetingState }
+
+        if inMeeting && !wasMeeting {
+            // Meeting started - check manual override priority
+            if appState.manualOverride != nil || appState.manualInCallOverride == true {
+                stateLock.withLock { lastMeetingState = inMeeting }
+                return
+            }
+
+            // Set meeting status with expiration
+            Task {
+                do {
+                    let meetingStatus: SlackStatusEmoji
+                    if let endDate = meetingEndDate {
+                        meetingStatus = .meeting(
+                            emoji: configState.meetingEmoji,
+                            text: configState.meetingStatusText,
+                            endDate: endDate
+                        )
+                    } else {
+                        meetingStatus = SlackStatusEmoji(
+                            emoji: configState.meetingEmoji,
+                            text: configState.meetingStatusText,
+                            expiration: 0
+                        )
+                    }
+                    try await slackClient.setStatus(meetingStatus)
+                    await MainActor.run {
+                        appState.updateStatus("In meeting")
+                    }
+                } catch {
+                    await MainActor.run {
+                        appState.setError("Failed to set meeting status: \(error.localizedDescription)")
+                    }
+                }
+            }
+        } else if !inMeeting && wasMeeting {
+            // Meeting ended
+            if appState.manualOverride != nil || appState.manualInCallOverride == true {
+                stateLock.withLock { lastMeetingState = inMeeting }
+                return
+            }
+
+            // If still in a call (auto-detected), restore call status
+            if appState.isInCall {
+                Task {
+                    do {
+                        try await slackClient.setStatus(.inMeeting)
+                        await MainActor.run {
+                            appState.updateStatus("Meeting ended, in call")
+                        }
+                    } catch {
+                        await MainActor.run {
+                            appState.setError("Failed to restore call status: \(error.localizedDescription)")
+                        }
+                    }
+                }
+            } else {
+                Task {
+                    do {
+                        try await slackClient.clearStatus()
+                        await MainActor.run {
+                            appState.updateStatus("Meeting ended")
+                        }
+                    } catch {
+                        await MainActor.run {
+                            appState.setError("Failed to clear meeting status: \(error.localizedDescription)")
+                        }
+                    }
+                }
+            }
+        }
+
+        stateLock.withLock { lastMeetingState = inMeeting }
+    }
+
     // MARK: - Manual Call Override
 
     func setManualInCall() {
@@ -423,7 +533,7 @@ final class ScheduleManager {
     }
 
     func clearManualInCall() {
-        guard let appState = appState else { return }
+        guard let appState = appState, let configState = configState else { return }
 
         // Force clear and suppress auto-detection for 30 seconds
         micMonitor.forceClearCall()
@@ -436,16 +546,104 @@ final class ScheduleManager {
             NotificationCenter.default.post(name: .updateMenuBarIcon, object: nil)
         }
 
-        // Clear Slack status immediately
+        // If still in a meeting, restore meeting status instead of clearing
+        if appState.isInMeeting {
+            let meeting = calendarMonitor.getCurrentMeeting()
+            Task {
+                do {
+                    let meetingStatus: SlackStatusEmoji
+                    if let endDate = meeting?.endDate {
+                        meetingStatus = .meeting(
+                            emoji: configState.meetingEmoji,
+                            text: configState.meetingStatusText,
+                            endDate: endDate
+                        )
+                    } else {
+                        meetingStatus = SlackStatusEmoji(
+                            emoji: configState.meetingEmoji,
+                            text: configState.meetingStatusText,
+                            expiration: 0
+                        )
+                    }
+                    try await slackClient.setStatus(meetingStatus)
+                    await MainActor.run {
+                        appState.updateStatus("Call cleared, in meeting")
+                    }
+                } catch {
+                    await MainActor.run {
+                        appState.setError("Failed to restore meeting status: \(error.localizedDescription)")
+                    }
+                }
+            }
+        } else {
+            // Clear Slack status
+            Task {
+                do {
+                    try await slackClient.clearStatus()
+                    await MainActor.run {
+                        appState.updateStatus("Call cleared (suppressed 30s)")
+                    }
+                } catch {
+                    await MainActor.run {
+                        appState.setError("Failed to clear status: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Manual Meeting Override
+
+    func setManualInMeeting() {
+        guard let appState = appState, let configState = configState else { return }
+
+        Task { @MainActor in
+            appState.isInMeeting = true
+            appState.currentMeetingTitle = nil
+            NotificationCenter.default.post(name: .updateMenuBarIcon, object: nil)
+        }
+
         Task {
             do {
-                try await slackClient.clearStatus()
-                await MainActor.run {
-                    appState.updateStatus("Call cleared (suppressed 30s)")
-                }
+                let meetingStatus = SlackStatusEmoji(
+                    emoji: configState.meetingEmoji,
+                    text: configState.meetingStatusText,
+                    expiration: 0
+                )
+                try await slackClient.setStatus(meetingStatus)
+                await MainActor.run { appState.updateStatus("In meeting (manual)") }
             } catch {
-                await MainActor.run {
-                    appState.setError("Failed to clear status: \(error.localizedDescription)")
+                await MainActor.run { appState.setError(error.localizedDescription) }
+            }
+        }
+
+        stateLock.withLock { lastMeetingState = true }
+    }
+
+    func clearManualMeeting() {
+        guard let appState = appState else { return }
+
+        // Check if a real calendar meeting is still active
+        let realMeeting = calendarMonitor.isInMeeting()
+
+        Task { @MainActor in
+            appState.isInMeeting = realMeeting
+            appState.currentMeetingTitle = nil
+            NotificationCenter.default.post(name: .updateMenuBarIcon, object: nil)
+        }
+
+        if realMeeting {
+            // Real calendar meeting still active - restore calendar meeting status
+            stateLock.withLock { lastMeetingState = true }
+        } else {
+            // No real meeting - clear status
+            stateLock.withLock { lastMeetingState = false }
+            Task {
+                do {
+                    try await slackClient.clearStatus()
+                    await MainActor.run { appState.updateStatus("Meeting cleared") }
+                } catch {
+                    await MainActor.run { appState.setError(error.localizedDescription) }
                 }
             }
         }
@@ -518,6 +716,36 @@ final class ScheduleManager {
         } else {
             micMonitor.stopMonitoring()
         }
+    }
+
+    func updateCalendarSync(enabled: Bool) {
+        configState?.calendarSyncEnabled = enabled
+        if enabled {
+            // Re-set callback (stopMonitoring nils it out)
+            calendarMonitor.onMeetingStateChanged = { [weak self] inMeeting, endDate in
+                self?.handleMeetingStateChange(inMeeting, meetingEndDate: endDate)
+            }
+            if let configState = configState {
+                calendarMonitor.selectedCalendarIDs = configState.selectedCalendarIDs
+                calendarMonitor.eventFetchInterval = TimeInterval(configState.calendarSyncIntervalMinutes * 60)
+            }
+            Task { await calendarMonitor.requestAccess() }
+            calendarMonitor.startMonitoring()
+        } else {
+            calendarMonitor.stopMonitoring()
+        }
+    }
+
+    func updateCalendarSyncInterval(minutes: Int) {
+        calendarMonitor.eventFetchInterval = TimeInterval(minutes * 60)
+    }
+
+    func updateSelectedCalendars(_ ids: Set<String>) {
+        calendarMonitor.selectedCalendarIDs = ids
+    }
+
+    func syncCalendarNow() {
+        calendarMonitor.forceSync()
     }
 
     func saveConfig() {

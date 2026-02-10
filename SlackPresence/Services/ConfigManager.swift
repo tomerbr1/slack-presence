@@ -10,6 +10,11 @@ struct AppConfig: Codable {
     var callEndDelay: Int    // Seconds to confirm call ended
     var disabledDeviceUIDs: Set<String>  // Device UIDs user has disabled for monitoring
     var hasCompletedOnboarding: Bool
+    var calendarSyncEnabled: Bool
+    var selectedCalendarIDs: Set<String>
+    var meetingEmoji: String
+    var meetingStatusText: String
+    var calendarSyncIntervalMinutes: Int
 
     // Support old config format migration
     enum CodingKeys: String, CodingKey {
@@ -22,6 +27,11 @@ struct AppConfig: Codable {
         case callEndDelay
         case disabledDeviceUIDs
         case hasCompletedOnboarding
+        case calendarSyncEnabled
+        case selectedCalendarIDs
+        case meetingEmoji
+        case meetingStatusText
+        case calendarSyncIntervalMinutes
     }
 
     init() {
@@ -33,6 +43,11 @@ struct AppConfig: Codable {
         callEndDelay = 3
         disabledDeviceUIDs = []
         hasCompletedOnboarding = false
+        calendarSyncEnabled = false
+        selectedCalendarIDs = []
+        meetingEmoji = ":headphones:"
+        meetingStatusText = "In a meeting"
+        calendarSyncIntervalMinutes = 15
     }
 
     init(from decoder: Decoder) throws {
@@ -44,6 +59,11 @@ struct AppConfig: Codable {
         callEndDelay = try container.decode(Int.self, forKey: .callEndDelay)
         disabledDeviceUIDs = try container.decodeIfPresent(Set<String>.self, forKey: .disabledDeviceUIDs) ?? []
         hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
+        calendarSyncEnabled = try container.decodeIfPresent(Bool.self, forKey: .calendarSyncEnabled) ?? false
+        selectedCalendarIDs = try container.decodeIfPresent(Set<String>.self, forKey: .selectedCalendarIDs) ?? []
+        meetingEmoji = try container.decodeIfPresent(String.self, forKey: .meetingEmoji) ?? ":headphones:"
+        meetingStatusText = try container.decodeIfPresent(String.self, forKey: .meetingStatusText) ?? "In a meeting"
+        calendarSyncIntervalMinutes = try container.decodeIfPresent(Int.self, forKey: .calendarSyncIntervalMinutes) ?? 15
 
         // Try new key first, fall back to legacy key
         if let enabled = try? container.decode(Bool.self, forKey: .callDetectionEnabled) {
@@ -65,6 +85,11 @@ struct AppConfig: Codable {
         try container.encode(callEndDelay, forKey: .callEndDelay)
         try container.encode(disabledDeviceUIDs, forKey: .disabledDeviceUIDs)
         try container.encode(hasCompletedOnboarding, forKey: .hasCompletedOnboarding)
+        try container.encode(calendarSyncEnabled, forKey: .calendarSyncEnabled)
+        try container.encode(selectedCalendarIDs, forKey: .selectedCalendarIDs)
+        try container.encode(meetingEmoji, forKey: .meetingEmoji)
+        try container.encode(meetingStatusText, forKey: .meetingStatusText)
+        try container.encode(calendarSyncIntervalMinutes, forKey: .calendarSyncIntervalMinutes)
     }
 }
 

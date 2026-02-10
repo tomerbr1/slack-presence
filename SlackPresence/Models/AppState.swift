@@ -10,6 +10,8 @@ final class AppState {
     var isDNDActive: Bool = false
 
     // Call detection status for display
+    var isInMeeting: Bool = false
+    var currentMeetingTitle: String? = nil
     var micActive: Bool = false
     var manualInCallOverride: Bool? = nil  // nil = auto-detect, true/false = manual
 
@@ -30,9 +32,8 @@ final class AppState {
     }
 
     var menuBarIcon: String {
-        if isInCall {
-            return "headphones"
-        }
+        if isInMeeting { return "calendar" }
+        if isInCall { return "headphones" }
         switch effectivePresence {
         case .active:
             return "sun.max.fill"
@@ -46,13 +47,12 @@ final class AppState {
 
     /// Whether the icon needs a DND badge overlay (only for Active + DND)
     var needsDNDBadge: Bool {
-        return isDNDActive && effectivePresence == .active && !isInCall
+        return isDNDActive && effectivePresence == .active && !isInCall && !isInMeeting
     }
 
     var menuBarIconColor: Color {
-        if isInCall {
-            return .purple
-        }
+        if isInMeeting { return .blue }
+        if isInCall { return .purple }
         switch effectivePresence {
         case .active:
             return .green
@@ -90,6 +90,11 @@ final class ConfigState {
     var callEndDelay: Int = 3     // Seconds to confirm call ended
     var disabledDeviceUIDs: Set<String> = []  // Device UIDs user has disabled
     var hasCompletedOnboarding: Bool = false
+    var calendarSyncEnabled: Bool = false
+    var selectedCalendarIDs: Set<String> = []
+    var meetingEmoji: String = ":headphones:"
+    var meetingStatusText: String = "In a meeting"
+    var calendarSyncIntervalMinutes: Int = 15
 
     // Track current active scheduled status
     var activeScheduledStatus: ScheduledStatus? = nil
@@ -103,6 +108,11 @@ final class ConfigState {
         callEndDelay = config.callEndDelay
         disabledDeviceUIDs = config.disabledDeviceUIDs
         hasCompletedOnboarding = config.hasCompletedOnboarding
+        calendarSyncEnabled = config.calendarSyncEnabled
+        selectedCalendarIDs = config.selectedCalendarIDs
+        meetingEmoji = config.meetingEmoji
+        meetingStatusText = config.meetingStatusText
+        calendarSyncIntervalMinutes = config.calendarSyncIntervalMinutes
 
         // Apply to MicMonitor
         MicMonitor.shared.callStartDelay = TimeInterval(callStartDelay)
@@ -120,6 +130,11 @@ final class ConfigState {
         config.callEndDelay = callEndDelay
         config.disabledDeviceUIDs = disabledDeviceUIDs
         config.hasCompletedOnboarding = hasCompletedOnboarding
+        config.calendarSyncEnabled = calendarSyncEnabled
+        config.selectedCalendarIDs = selectedCalendarIDs
+        config.meetingEmoji = meetingEmoji
+        config.meetingStatusText = meetingStatusText
+        config.calendarSyncIntervalMinutes = calendarSyncIntervalMinutes
         return config
     }
 }

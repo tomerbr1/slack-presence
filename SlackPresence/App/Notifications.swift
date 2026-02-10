@@ -16,4 +16,7 @@ extension Notification.Name {
 
     /// Open the welcome/onboarding window
     static let openWelcome = Notification.Name("openWelcome")
+
+    /// Open the troubleshooting window
+    static let openTroubleshooting = Notification.Name("openTroubleshooting")
 }

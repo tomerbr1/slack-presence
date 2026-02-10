@@ -8,6 +8,7 @@ enum OnboardingStep: Int, CaseIterable {
     case credentials
     case devices
     case schedule
+    case calendar
     case finish
 
     var title: String {
@@ -16,6 +17,7 @@ enum OnboardingStep: Int, CaseIterable {
         case .credentials: return "Connect to Slack"
         case .devices: return "Device Selection"
         case .schedule: return "Schedule"
+        case .calendar: return "Calendar"
         case .finish: return "All Set!"
         }
     }
@@ -49,6 +51,8 @@ struct OnboardingView: View {
                     DevicesStepView(configState: configState)
                 case .schedule:
                     ScheduleStepView(configState: configState)
+                case .calendar:
+                    CalendarStepView(configState: configState)
                 case .finish:
                     FinishStepView(configState: configState, dontShowAgain: $dontShowAgain)
                 }
@@ -187,6 +191,13 @@ struct WelcomeStepView: View {
                     iconColor: .purple,
                     title: "Call Detection",
                     description: "Show :headphones: status when you're in a meeting"
+                )
+
+                OnboardingFeatureRow(
+                    icon: "calendar",
+                    iconColor: .blue,
+                    title: "Calendar Integration",
+                    description: "Auto-set meeting status from your Outlook calendar"
                 )
 
                 OnboardingFeatureRow(
@@ -678,6 +689,16 @@ struct FinishStepView: View {
                     title: "Debug",
                     description: "View mic status and troubleshoot call detection"
                 )
+
+                OnboardingQuickRefCard(
+                    icon: "wrench.and.screwdriver",
+                    iconColor: .teal,
+                    title: "Troubleshooting",
+                    description: "Common issues and solutions"
+                )
+                .onTapGesture {
+                    NotificationCenter.default.post(name: .openTroubleshooting, object: nil)
+                }
 
                 OnboardingQuickRefCard(
                     icon: "info.circle.fill",

@@ -1,6 +1,6 @@
 # Slack Presence Automation
 
-A macOS menu bar app that automates Slack presence based on your schedule and call status.
+A macOS menu bar app that automates Slack presence based on your schedule, call status, and calendar events.
 
 ## Why?
 
@@ -9,6 +9,7 @@ Slack doesn't have native quiet hours or automatic call detection. This app fill
 | Gap | Solution |
 |-----|----------|
 | Calls don't update Slack | When your mic is active (any app), Slack shows :headphones: automatically |
+| Meetings don't update Slack | Calendar sync sets :calendar: status during meetings |
 | Slack has no quiet hours | Schedule work hours - automatically go Away outside them |
 | DND status isn't visible | Menu bar icon shows when notifications are paused |
 
@@ -18,8 +19,10 @@ Slack doesn't have native quiet hours or automatic call detection. This app fill
 - Schedule Active/Away hours per day of the week
 - **Scheduled statuses** - set custom Slack status text/emoji at specific times
 - Automatic :headphones: status during calls (mic-based detection)
+- **Calendar sync** - reads your macOS calendar and sets :calendar: status during meetings
 - **Per-device mic selection** - choose which microphones to monitor
-- Manual "Set In Call" / "Clear In Call" controls
+- Manual "Set In Call" / "Set In Meeting" / "Clear" controls
+- **Troubleshooting** built-in help screen
 - Visual DND indicator in menu bar
 - Manual presence override when needed
 - Launch at Login toggle (built-in, no LaunchAgent needed)
@@ -69,8 +72,9 @@ On first run, a welcome guide walks you through:
 1. **Welcome** - Feature overview
 2. **Connect to Slack** - Enter your xoxc token and d cookie (with test connection)
 3. **Device Selection** - Choose which microphones to monitor
-4. **Schedule** - Review your work hours
-5. **Finish** - Enable Launch at Login, configure DND, start using the app
+4. **Calendar** - Enable calendar sync for automatic meeting status
+5. **Schedule** - Review your work hours
+6. **Finish** - Enable Launch at Login, configure DND, start using the app
 
 You can reopen the guide anytime from the menu bar → "Show Welcome Guide".
 
@@ -112,14 +116,17 @@ The app will notify you if the token stops working - just repeat the steps above
 ### Menu Bar
 
 Click the menu bar icon to see:
-- Current status (Active/Away/In Call)
+- Current status (Active/Away/In Call/In Meeting)
 - Quick toggles: Set Active (Cmd+A), Set Away (Cmd+Shift+W)
 - Resume Schedule (Cmd+R) - clears manual override
-- Set In Call (Cmd+I) - manually mark yourself as in a call
-- Clear In Call (Cmd+Shift+I) - return to auto-detection
+- Set In Call (Cmd+I) / Set In Meeting (Cmd+M) - manual overrides
+- Clear In Call (Cmd+Shift+I) / Clear Meeting (Cmd+Shift+M)
+- Call Detection / Calendar Sync toggle checkmarks
+- Sync Calendar Now (Cmd+Shift+S)
 - Edit Schedule... (Cmd+,)
 - Scheduled Statuses... (Cmd+T)
 - Settings... (Cmd+S)
+- Troubleshooting
 - Show Welcome Guide
 - Debug Info (Cmd+D)
 - About Slack Presence
@@ -147,6 +154,21 @@ When enabled (in Settings):
 **Manual Override:**
 - Use "Set In Call" to manually show :headphones: status (useful when mic detection doesn't trigger)
 - Use "Clear In Call" to return to automatic detection
+
+### Calendar Sync
+
+When enabled, the app reads your macOS calendar and sets a meeting status during events:
+
+- Uses EventKit to access calendars synced to macOS (Outlook, Exchange, Google, iCloud, etc.)
+- Sets :calendar: status with configurable text (default "In a meeting") during events
+- Only triggers for events where you accepted or are the organizer (skips declined/tentative)
+- Status includes an expiration time for crash safety - if the app quits, Slack clears it automatically
+- Configurable emoji (predefined picker or custom) and status text
+
+**Setup:**
+- Grant calendar access when prompted (or in System Settings - Privacy - Calendars)
+- Enable "Calendar Sync" in Settings - Calendar tab or during onboarding
+- Use "Sync Calendar Now" from menu bar or settings to force a refresh
 
 ### Scheduled Statuses
 
@@ -202,8 +224,8 @@ Credentials are stored securely in macOS Keychain, not in the config file.
 - Works with any app using your microphone (Webex, Zoom, Teams, FaceTime, etc.)
 
 ### Priority
-1. Manual call override (if you clicked "Set In Call")
-2. Manual presence override (if you clicked "Set Active" or "Set Away")
+1. Manual override (Set In Call / Set In Meeting / Set Active / Set Away)
+2. Automatic meeting detection (calendar-based :calendar:)
 3. Automatic call detection (mic-based :headphones:)
 4. Schedule-based presence
 
@@ -233,6 +255,7 @@ Credentials are stored securely in macOS Keychain, not in the config file.
 
 - All credentials stored in macOS Keychain (encrypted)
 - **No microphone permission needed** - uses CoreAudio hardware queries to detect mic activity, never captures audio
+- **Calendar access** is optional - only reads event titles and times, never modifies your calendar
 - No data sent to external servers
 - Communicates only with Slack's servers using your token
 - Config file contains only schedule settings, no credentials
@@ -246,10 +269,12 @@ SlackPresence/
 │   ├── AppDelegate.swift           # Menu bar + window management
 │   └── Notifications.swift         # App-wide notification names
 ├── Views/
-│   ├── OnboardingView.swift        # Welcome guide (5-step wizard)
+│   ├── OnboardingView.swift        # Welcome guide (6-step wizard)
 │   ├── ScheduleEditorView.swift    # Per-day schedule UI
 │   ├── StatusScheduleEditorView.swift # Scheduled statuses editor
-│   ├── SettingsView.swift          # Token config, call detection, devices
+│   ├── SettingsView.swift          # Token config, call detection, devices, calendar
+│   ├── CalendarSettingsView.swift  # Calendar sync settings
+│   ├── TroubleshootingView.swift   # Built-in troubleshooting help
 │   ├── SharedComponents.swift      # Reusable UI components
 │   ├── TokenHelpView.swift         # Credentials setup guide
 │   ├── DebugView.swift             # Debug info (mic status, devices)
@@ -257,7 +282,8 @@ SlackPresence/
 ├── Services/
 │   ├── SlackClient.swift           # Slack API calls
 │   ├── MicMonitor.swift            # Microphone-based call detection
-│   ├── ScheduleManager.swift       # Timer logic + call state handling
+│   ├── CalendarMonitor.swift       # EventKit calendar monitoring
+│   ├── ScheduleManager.swift       # Timer logic + state orchestration
 │   ├── NetworkMonitor.swift        # Network connectivity
 │   └── ConfigManager.swift         # Config + Keychain
 └── Models/

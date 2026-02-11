@@ -66,7 +66,7 @@ struct AppConfig: Codable {
         triggerOnTentative = true
         triggerOnFree = false
         oooEnabled = false
-        oooEmoji = ":palm_tree:"
+        oooEmoji = ":no_entry:"
         oooStatusText = "Out of office"
         oooPauseNotifications = true
     }

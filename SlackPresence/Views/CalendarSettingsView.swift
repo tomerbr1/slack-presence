@@ -9,6 +9,7 @@ private let slackEmojiDisplay: [(code: String, display: String)] = [
 ]
 
 private let oooEmojiDisplay: [(code: String, display: String)] = [
+    (":no_entry:", "\u{26D4}"),
     (":palm_tree:", "\u{1F334}"),
     (":airplane:", "\u{2708}\u{FE0F}"),
     (":house:", "\u{1F3E0}"),

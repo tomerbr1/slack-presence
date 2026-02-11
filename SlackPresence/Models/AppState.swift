@@ -12,6 +12,8 @@ final class AppState {
     // Call detection status for display
     var isInMeeting: Bool = false
     var currentMeetingTitle: String? = nil
+    var isOutOfOffice: Bool = false
+    var oooEndDate: Date? = nil
     var micActive: Bool = false
     var manualInCallOverride: Bool? = nil  // nil = auto-detect, true/false = manual
 
@@ -32,6 +34,7 @@ final class AppState {
     }
 
     var menuBarIcon: String {
+        if isOutOfOffice { return "airplane" }
         if isInMeeting { return "calendar" }
         if isInCall { return "headphones" }
         switch effectivePresence {
@@ -47,10 +50,11 @@ final class AppState {
 
     /// Whether the icon needs a DND badge overlay (only for Active + DND)
     var needsDNDBadge: Bool {
-        return isDNDActive && effectivePresence == .active && !isInCall && !isInMeeting
+        return isDNDActive && effectivePresence == .active && !isInCall && !isInMeeting && !isOutOfOffice
     }
 
     var menuBarIconColor: Color {
+        if isOutOfOffice { return .orange }
         if isInMeeting { return .blue }
         if isInCall { return .purple }
         switch effectivePresence {
@@ -95,6 +99,13 @@ final class ConfigState {
     var meetingEmoji: String = ":headphones:"
     var meetingStatusText: String = "In a meeting"
     var calendarSyncIntervalMinutes: Int = 15
+    var triggerOnBusy: Bool = true
+    var triggerOnTentative: Bool = true
+    var triggerOnFree: Bool = false
+    var oooEnabled: Bool = false
+    var oooEmoji: String = ":palm_tree:"
+    var oooStatusText: String = "Out of office"
+    var oooPauseNotifications: Bool = true
 
     // Track current active scheduled status
     var activeScheduledStatus: ScheduledStatus? = nil
@@ -113,6 +124,13 @@ final class ConfigState {
         meetingEmoji = config.meetingEmoji
         meetingStatusText = config.meetingStatusText
         calendarSyncIntervalMinutes = config.calendarSyncIntervalMinutes
+        triggerOnBusy = config.triggerOnBusy
+        triggerOnTentative = config.triggerOnTentative
+        triggerOnFree = config.triggerOnFree
+        oooEnabled = config.oooEnabled
+        oooEmoji = config.oooEmoji
+        oooStatusText = config.oooStatusText
+        oooPauseNotifications = config.oooPauseNotifications
 
         // Apply to MicMonitor
         MicMonitor.shared.callStartDelay = TimeInterval(callStartDelay)
@@ -135,6 +153,13 @@ final class ConfigState {
         config.meetingEmoji = meetingEmoji
         config.meetingStatusText = meetingStatusText
         config.calendarSyncIntervalMinutes = calendarSyncIntervalMinutes
+        config.triggerOnBusy = triggerOnBusy
+        config.triggerOnTentative = triggerOnTentative
+        config.triggerOnFree = triggerOnFree
+        config.oooEnabled = oooEnabled
+        config.oooEmoji = oooEmoji
+        config.oooStatusText = oooStatusText
+        config.oooPauseNotifications = oooPauseNotifications
         return config
     }
 }

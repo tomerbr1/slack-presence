@@ -15,6 +15,13 @@ struct AppConfig: Codable {
     var meetingEmoji: String
     var meetingStatusText: String
     var calendarSyncIntervalMinutes: Int
+    var triggerOnBusy: Bool
+    var triggerOnTentative: Bool
+    var triggerOnFree: Bool
+    var oooEnabled: Bool
+    var oooEmoji: String
+    var oooStatusText: String
+    var oooPauseNotifications: Bool
 
     // Support old config format migration
     enum CodingKeys: String, CodingKey {
@@ -32,6 +39,13 @@ struct AppConfig: Codable {
         case meetingEmoji
         case meetingStatusText
         case calendarSyncIntervalMinutes
+        case triggerOnBusy
+        case triggerOnTentative
+        case triggerOnFree
+        case oooEnabled
+        case oooEmoji
+        case oooStatusText
+        case oooPauseNotifications
     }
 
     init() {
@@ -48,6 +62,13 @@ struct AppConfig: Codable {
         meetingEmoji = ":headphones:"
         meetingStatusText = "In a meeting"
         calendarSyncIntervalMinutes = 15
+        triggerOnBusy = true
+        triggerOnTentative = true
+        triggerOnFree = false
+        oooEnabled = false
+        oooEmoji = ":palm_tree:"
+        oooStatusText = "Out of office"
+        oooPauseNotifications = true
     }
 
     init(from decoder: Decoder) throws {
@@ -64,6 +85,13 @@ struct AppConfig: Codable {
         meetingEmoji = try container.decodeIfPresent(String.self, forKey: .meetingEmoji) ?? ":headphones:"
         meetingStatusText = try container.decodeIfPresent(String.self, forKey: .meetingStatusText) ?? "In a meeting"
         calendarSyncIntervalMinutes = try container.decodeIfPresent(Int.self, forKey: .calendarSyncIntervalMinutes) ?? 15
+        triggerOnBusy = try container.decodeIfPresent(Bool.self, forKey: .triggerOnBusy) ?? true
+        triggerOnTentative = try container.decodeIfPresent(Bool.self, forKey: .triggerOnTentative) ?? true
+        triggerOnFree = try container.decodeIfPresent(Bool.self, forKey: .triggerOnFree) ?? false
+        oooEnabled = try container.decodeIfPresent(Bool.self, forKey: .oooEnabled) ?? false
+        oooEmoji = try container.decodeIfPresent(String.self, forKey: .oooEmoji) ?? ":palm_tree:"
+        oooStatusText = try container.decodeIfPresent(String.self, forKey: .oooStatusText) ?? "Out of office"
+        oooPauseNotifications = try container.decodeIfPresent(Bool.self, forKey: .oooPauseNotifications) ?? true
 
         // Try new key first, fall back to legacy key
         if let enabled = try? container.decode(Bool.self, forKey: .callDetectionEnabled) {
@@ -90,6 +118,13 @@ struct AppConfig: Codable {
         try container.encode(meetingEmoji, forKey: .meetingEmoji)
         try container.encode(meetingStatusText, forKey: .meetingStatusText)
         try container.encode(calendarSyncIntervalMinutes, forKey: .calendarSyncIntervalMinutes)
+        try container.encode(triggerOnBusy, forKey: .triggerOnBusy)
+        try container.encode(triggerOnTentative, forKey: .triggerOnTentative)
+        try container.encode(triggerOnFree, forKey: .triggerOnFree)
+        try container.encode(oooEnabled, forKey: .oooEnabled)
+        try container.encode(oooEmoji, forKey: .oooEmoji)
+        try container.encode(oooStatusText, forKey: .oooStatusText)
+        try container.encode(oooPauseNotifications, forKey: .oooPauseNotifications)
     }
 }
 

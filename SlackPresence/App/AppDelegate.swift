@@ -213,6 +213,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             _ = appState.manualOverride
             _ = appState.isInCall
             _ = appState.isInMeeting
+            _ = appState.isOutOfOffice
             _ = appState.isDNDActive
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
@@ -411,13 +412,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
             welcomeWindow = NSWindow(contentViewController: hostingController)
             welcomeWindow?.title = "Welcome to SlackPresence"
-            welcomeWindow?.setContentSize(NSSize(width: 520, height: 650))
+            welcomeWindow?.setContentSize(NSSize(width: 520, height: 780))
             welcomeWindow?.styleMask = [.titled, .closable]
             welcomeWindow?.delegate = self
             welcomeWindow?.center()
         }
 
+        welcomeWindow?.level = .floating
         showWindow(welcomeWindow)
+        // Reset to normal after it's visible so it doesn't stay always-on-top
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.welcomeWindow?.level = .normal
+        }
     }
 
     @objc private func openTroubleshooting() {

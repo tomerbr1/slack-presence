@@ -9,6 +9,7 @@ enum OnboardingStep: Int, CaseIterable {
     case devices
     case schedule
     case calendar
+    case calendarConfig
     case finish
 
     var title: String {
@@ -18,6 +19,7 @@ enum OnboardingStep: Int, CaseIterable {
         case .devices: return "Device Selection"
         case .schedule: return "Schedule"
         case .calendar: return "Calendar"
+        case .calendarConfig: return "Meeting Status"
         case .finish: return "All Set!"
         }
     }
@@ -53,6 +55,8 @@ struct OnboardingView: View {
                     ScheduleStepView(configState: configState)
                 case .calendar:
                     CalendarStepView(configState: configState)
+                case .calendarConfig:
+                    CalendarConfigStepView(configState: configState)
                 case .finish:
                     FinishStepView(configState: configState, dontShowAgain: $dontShowAgain)
                 }
@@ -629,12 +633,12 @@ struct FinishStepView: View {
     @State private var checkmarkScale: CGFloat = 0
 
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer()
+        VStack(spacing: 12) {
+            Spacer(minLength: 4)
 
             // Success checkmark with animation
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 72))
+                .font(.system(size: 48))
                 .foregroundColor(.green)
                 .scaleEffect(checkmarkScale)
                 .onAppear {
@@ -644,17 +648,17 @@ struct FinishStepView: View {
                 }
 
             Text("You're All Set!")
-                .font(.largeTitle)
+                .font(.title2)
                 .fontWeight(.bold)
 
             Text("SlackPresence is ready to manage your Slack presence automatically")
-                .font(.subheadline)
+                .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
             // Important settings
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 LaunchAtLoginToggle(showIcon: true, backgroundColor: Color.blue.opacity(0.1))
 
                 HStack(spacing: 12) {
@@ -668,14 +672,14 @@ struct FinishStepView: View {
                             ScheduleManager.shared.updatePauseNotifications(enabled: newValue)
                         }
                 }
-                .padding(12)
+                .padding(10)
                 .background(Color.orange.opacity(0.1))
                 .cornerRadius(10)
             }
             .padding(.horizontal, 40)
 
             // Quick reference cards
-            VStack(spacing: 10) {
+            VStack(spacing: 6) {
                 OnboardingQuickRefCard(
                     icon: "gearshape.fill",
                     iconColor: .gray,
@@ -709,14 +713,14 @@ struct FinishStepView: View {
             }
             .padding(.horizontal, 40)
 
-            Spacer()
+            Spacer(minLength: 4)
 
             // Don't show again checkbox
             Toggle("Don't show this welcome guide again", isOn: $dontShowAgain)
                 .font(.caption)
                 .padding(.horizontal, 40)
         }
-        .padding()
+        .padding(.vertical, 8)
     }
 }
 

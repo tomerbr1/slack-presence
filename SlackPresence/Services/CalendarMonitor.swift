@@ -9,13 +9,21 @@ final class CalendarMonitor {
     private var timer: Timer?
     private var isMonitoring = false
 
-    // Callback: (inMeeting, meetingEndDate)
+    // Callbacks
     var onMeetingStateChanged: ((Bool, Date?) -> Void)?
+    var onOOOStateChanged: ((Bool, Date?) -> Void)?
 
     // Thread-safe state
     private var lastKnownMeetingState: Bool = false
     private var currentMeetingEndDate: Date?
     private var currentMeetingTitle: String?
+    private var lastKnownOOOState: Bool = false
+    private var currentOOOEndDate: Date?
+
+    // Configurable availability filter
+    var triggerOnBusy: Bool = true
+    var triggerOnTentative: Bool = true
+    var triggerOnFree: Bool = false
 
     // Event cache
     private var cachedEvents: [EKEvent] = []
@@ -79,6 +87,7 @@ final class CalendarMonitor {
         isMonitoring = false
         NotificationCenter.default.removeObserver(self, name: .EKEventStoreChanged, object: eventStore)
         onMeetingStateChanged = nil
+        onOOOStateChanged = nil
     }
 
     // MARK: - Public State Access
@@ -98,6 +107,18 @@ final class CalendarMonitor {
             return nil
         }
         return (title, endDate)
+    }
+
+    func isOutOfOffice() -> Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return lastKnownOOOState
+    }
+
+    func getOOOEndDate() -> Date? {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return currentOOOEndDate
     }
 
     func getAvailableCalendars() -> [EKCalendar] {
@@ -124,24 +145,51 @@ final class CalendarMonitor {
         }
 
         let now = Date()
+
+        // Meeting check (non-all-day, configurable availability)
         let activeMeeting = cachedEvents.first { event in
             guard !event.isAllDay else { return false }
             guard event.startDate <= now && now < event.endDate else { return false }
             guard selectedCalendarIDs.isEmpty || selectedCalendarIDs.contains(event.calendar.calendarIdentifier) else { return false }
-            let availability = event.availability
-            return availability == .busy || availability == .tentative
+            return matchesAvailabilityFilter(event.availability)
         }
 
         let inMeeting = activeMeeting != nil
-        let changed = inMeeting != lastKnownMeetingState
+        let meetingChanged = inMeeting != lastKnownMeetingState
         lastKnownMeetingState = inMeeting
         currentMeetingEndDate = activeMeeting?.endDate
         currentMeetingTitle = activeMeeting?.title
-        let endDate = currentMeetingEndDate
+        let meetingEndDate = currentMeetingEndDate
+
+        // OOO check (includes all-day events, availability == .unavailable)
+        let activeOOO = cachedEvents.first { event in
+            guard event.startDate <= now && now < event.endDate else { return false }
+            guard selectedCalendarIDs.isEmpty || selectedCalendarIDs.contains(event.calendar.calendarIdentifier) else { return false }
+            return event.availability == .unavailable
+        }
+
+        let inOOO = activeOOO != nil
+        let oooChanged = inOOO != lastKnownOOOState
+        lastKnownOOOState = inOOO
+        currentOOOEndDate = activeOOO?.endDate
+        let oooEndDate = currentOOOEndDate
+
         stateLock.unlock()
 
-        if changed {
-            onMeetingStateChanged?(inMeeting, endDate)
+        if meetingChanged {
+            onMeetingStateChanged?(inMeeting, meetingEndDate)
+        }
+        if oooChanged {
+            onOOOStateChanged?(inOOO, oooEndDate)
+        }
+    }
+
+    private func matchesAvailabilityFilter(_ availability: EKEventAvailability) -> Bool {
+        switch availability {
+        case .busy: return triggerOnBusy
+        case .tentative: return triggerOnTentative
+        case .free: return triggerOnFree
+        default: return false
         }
     }
 

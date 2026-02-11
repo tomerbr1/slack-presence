@@ -103,7 +103,7 @@ final class ConfigState {
     var triggerOnTentative: Bool = true
     var triggerOnFree: Bool = false
     var oooEnabled: Bool = false
-    var oooEmoji: String = ":palm_tree:"
+    var oooEmoji: String = ":no_entry:"
     var oooStatusText: String = "Out of office"
     var oooPauseNotifications: Bool = true
 

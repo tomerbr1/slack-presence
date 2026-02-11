@@ -38,6 +38,14 @@ struct SlackStatusEmoji: Equatable {
             expiration: Int(endDate.timeIntervalSince1970)
         )
     }
+
+    static func outOfOffice(emoji: String, text: String, endDate: Date) -> SlackStatusEmoji {
+        SlackStatusEmoji(
+            emoji: emoji,
+            text: text,
+            expiration: Int(endDate.timeIntervalSince1970)
+        )
+    }
 }
 
 struct SlackCredentials: Codable {

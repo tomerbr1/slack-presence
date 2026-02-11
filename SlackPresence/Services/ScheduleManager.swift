@@ -26,6 +26,8 @@ final class ScheduleManager {
     private var lastMeetingState: Bool = false
     private var lastAppliedScheduledStatus: ScheduledStatus?
     private var dndWasSetByUs: Bool = false
+    private var lastOOOState: Bool = false
+    private var oooDndWasSetByUs: Bool = false
 
     private init() {}
 
@@ -61,10 +63,18 @@ final class ScheduleManager {
             self?.handleMeetingStateChange(inMeeting, meetingEndDate: endDate)
         }
 
+        // Set up OOO monitoring callback
+        calendarMonitor.onOOOStateChanged = { [weak self] isOOO, endDate in
+            self?.handleOOOStateChange(isOOO, endDate: endDate)
+        }
+
         // Start calendar sync if enabled
         if configState.calendarSyncEnabled {
             calendarMonitor.selectedCalendarIDs = configState.selectedCalendarIDs
             calendarMonitor.eventFetchInterval = TimeInterval(configState.calendarSyncIntervalMinutes * 60)
+            calendarMonitor.triggerOnBusy = configState.triggerOnBusy
+            calendarMonitor.triggerOnTentative = configState.triggerOnTentative
+            calendarMonitor.triggerOnFree = configState.triggerOnFree
             Task { await calendarMonitor.requestAccess() }
             calendarMonitor.startMonitoring()
         }
@@ -128,7 +138,8 @@ final class ScheduleManager {
         // Check DND status
         await checkDNDStatus()
 
-        // Skip if in meeting or call (auto-detection takes priority over schedule)
+        // Skip if in OOO, meeting, or call (auto-detection takes priority over schedule)
+        if appState.isOutOfOffice { return }
         if appState.isInMeeting { return }
         if appState.isInCall { return }
 
@@ -501,6 +512,110 @@ final class ScheduleManager {
         stateLock.withLock { lastMeetingState = inMeeting }
     }
 
+    // MARK: - OOO Handling
+
+    private func handleOOOStateChange(_ isOOO: Bool, endDate: Date?) {
+        guard let appState = appState, let configState = configState else { return }
+
+        // Only act if OOO feature is enabled
+        guard configState.oooEnabled else {
+            stateLock.withLock { lastOOOState = isOOO }
+            return
+        }
+
+        let wasOOO = stateLock.withLock { lastOOOState }
+
+        if isOOO && !wasOOO {
+            // OOO started - check manual override priority
+            if appState.manualOverride != nil || appState.manualInCallOverride == true {
+                stateLock.withLock { lastOOOState = isOOO }
+                return
+            }
+
+            Task { @MainActor in
+                appState.isOutOfOffice = true
+                appState.oooEndDate = endDate
+                NotificationCenter.default.post(name: .updateMenuBarIcon, object: nil)
+            }
+
+            Task {
+                do {
+                    // Set OOO status with expiration
+                    if let endDate = endDate {
+                        let oooStatus = SlackStatusEmoji.outOfOffice(
+                            emoji: configState.oooEmoji,
+                            text: configState.oooStatusText,
+                            endDate: endDate
+                        )
+                        try await slackClient.setStatus(oooStatus)
+                    } else {
+                        let oooStatus = SlackStatusEmoji(
+                            emoji: configState.oooEmoji,
+                            text: configState.oooStatusText,
+                            expiration: 0
+                        )
+                        try await slackClient.setStatus(oooStatus)
+                    }
+
+                    // Set presence to away
+                    try await slackClient.setPresence(.away)
+                    stateLock.withLock { lastAppliedPresence = .away }
+
+                    // Pause notifications if configured
+                    if configState.oooPauseNotifications {
+                        if let endDate = endDate {
+                            let minutes = max(1, Int(endDate.timeIntervalSinceNow / 60))
+                            try await slackClient.pauseNotifications(minutes: minutes)
+                            stateLock.withLock { oooDndWasSetByUs = true }
+                        }
+                    }
+
+                    await MainActor.run {
+                        appState.updateStatus("Out of office")
+                    }
+                } catch {
+                    await MainActor.run {
+                        appState.setError("Failed to set OOO status: \(error.localizedDescription)")
+                    }
+                }
+            }
+        } else if !isOOO && wasOOO {
+            // OOO ended
+            Task { @MainActor in
+                appState.isOutOfOffice = false
+                appState.oooEndDate = nil
+                NotificationCenter.default.post(name: .updateMenuBarIcon, object: nil)
+            }
+
+            Task {
+                do {
+                    try await slackClient.clearStatus()
+
+                    // Resume notifications if we paused them
+                    if stateLock.withLock({ oooDndWasSetByUs }) {
+                        try await slackClient.resumeNotifications()
+                        stateLock.withLock { oooDndWasSetByUs = false }
+                    }
+
+                    await MainActor.run {
+                        appState.updateStatus("OOO ended")
+                    }
+                } catch {
+                    await MainActor.run {
+                        appState.setError("Failed to clear OOO status: \(error.localizedDescription)")
+                    }
+                }
+            }
+
+            // Fall through to normal schedule
+            Task {
+                await checkAndApply()
+            }
+        }
+
+        stateLock.withLock { lastOOOState = isOOO }
+    }
+
     // MARK: - Manual Call Override
 
     func setManualInCall() {
@@ -721,13 +836,19 @@ final class ScheduleManager {
     func updateCalendarSync(enabled: Bool) {
         configState?.calendarSyncEnabled = enabled
         if enabled {
-            // Re-set callback (stopMonitoring nils it out)
+            // Re-set callbacks (stopMonitoring nils them out)
             calendarMonitor.onMeetingStateChanged = { [weak self] inMeeting, endDate in
                 self?.handleMeetingStateChange(inMeeting, meetingEndDate: endDate)
+            }
+            calendarMonitor.onOOOStateChanged = { [weak self] isOOO, endDate in
+                self?.handleOOOStateChange(isOOO, endDate: endDate)
             }
             if let configState = configState {
                 calendarMonitor.selectedCalendarIDs = configState.selectedCalendarIDs
                 calendarMonitor.eventFetchInterval = TimeInterval(configState.calendarSyncIntervalMinutes * 60)
+                calendarMonitor.triggerOnBusy = configState.triggerOnBusy
+                calendarMonitor.triggerOnTentative = configState.triggerOnTentative
+                calendarMonitor.triggerOnFree = configState.triggerOnFree
             }
             Task { await calendarMonitor.requestAccess() }
             calendarMonitor.startMonitoring()
@@ -756,6 +877,15 @@ final class ScheduleManager {
         } catch {
             appState?.setError("Failed to save config: \(error.localizedDescription)")
         }
+    }
+
+    func updateAvailabilityFilter(busy: Bool, tentative: Bool, free: Bool) {
+        configState?.triggerOnBusy = busy
+        configState?.triggerOnTentative = tentative
+        configState?.triggerOnFree = free
+        calendarMonitor.triggerOnBusy = busy
+        calendarMonitor.triggerOnTentative = tentative
+        calendarMonitor.triggerOnFree = free
     }
 
     func updatePauseNotifications(enabled: Bool) {

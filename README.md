@@ -38,11 +38,25 @@ By [Tomer Brami](https://github.com/tomerbr1)
 
 ## Installation
 
-### Prerequisites
-- macOS 13.0 or later
-- Xcode 15+ (for building from source)
+### Homebrew (recommended)
+
+```bash
+brew install --cask tomerbr1/tap/slack-presence
+```
+
+To update:
+```bash
+brew upgrade --cask slack-presence
+```
+
+To uninstall:
+```bash
+brew uninstall --cask slack-presence
+```
 
 ### Build from Source
+
+Requires macOS 13.0+ and Xcode 15+.
 
 1. Open the project in Xcode:
    ```bash
@@ -50,20 +64,9 @@ By [Tomer Brami](https://github.com/tomerbr1)
    open SlackPresence.xcodeproj
    ```
 
-   Or create a new Xcode project:
-   - File → New → Project
-   - Choose "App" under macOS
-   - Set Product Name to "SlackPresence"
-   - Set Interface to "SwiftUI"
-   - Drag all files from `SlackPresence/` folder into the project
+2. Build and run (Cmd+R)
 
-2. Configure the app:
-   - In project settings, set "Application is agent (UIElement)" to YES in Info.plist
-   - Or add `LSUIElement = true` to Info.plist
-
-3. Build and run (Cmd+R)
-
-4. The app will appear in your menu bar
+3. The app will appear in your menu bar
 
 ### First Launch
 

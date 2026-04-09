@@ -41,8 +41,11 @@ By [Tomer Brami](https://github.com/tomerbr1)
 ### Homebrew (recommended)
 
 ```bash
-brew install --cask tomerbr1/tap/slack-presence
+brew install --cask --appdir=~/Applications tomerbr1/tap/slack-presence
+xattr -cr ~/Applications/SlackPresence.app
 ```
+
+The `xattr` command is required to remove the quarantine attribute so macOS Gatekeeper allows the unsigned app to run. Without it, the app will not launch.
 
 To update:
 ```bash

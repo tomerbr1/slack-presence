@@ -20,10 +20,10 @@
     </dict>
 
     <key>StandardOutPath</key>
-    <string>/tmp/slack-presence.log</string>
+    <string>/Users/USER/Library/Logs/SlackPresence/slack-presence.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/tmp/slack-presence.err</string>
+    <string>/Users/USER/Library/Logs/SlackPresence/slack-presence.err</string>
 
     <key>ProcessType</key>
     <string>Interactive</string>

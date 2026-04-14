@@ -6,6 +6,12 @@
 
 A macOS menu bar app that automates Slack presence based on your schedule, call status, and calendar events.
 
+<p align="center">
+  <img src="Assets/screenshot1.jpg" alt="Presently menu bar interface" width="260">
+  &nbsp;&nbsp;&nbsp;
+  <img src="Assets/screenshot2.jpg" alt="Welcome guide on first launch" width="360">
+</p>
+
 ## Why?
 
 Slack doesn't have native quiet hours or automatic call detection. This app fills those gaps:
@@ -243,7 +249,7 @@ Credentials are stored securely in macOS Keychain, not in the config file.
 
 ### App doesn't appear in menu bar
 - Check System Settings → Login Items to ensure it's enabled
-- Make sure the app has `LSUIElement = true` in Info.plist
+- If it's still missing, check Console.app for crash logs from "Presently"
 
 ### Token not working
 - Tokens expire - re-extract from Slack web
@@ -304,4 +310,4 @@ Presently/
 
 ## License
 
-MIT - Personal use
+MIT - see [LICENSE](LICENSE) for details.

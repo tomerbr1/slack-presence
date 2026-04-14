@@ -33,3 +33,6 @@ Package.resolved
 
 # CocoaPods
 Pods/
+
+# Claude Code local workflow notes (not checked in)
+CLAUDE.local.md

@@ -1,15 +1,13 @@
 import Foundation
 
-enum SlackPresence: String, Codable {
+enum Presence: String, Codable {
     case active = "auto"
     case away = "away"
-    case unknown
 
     var displayName: String {
         switch self {
         case .active: return "Active"
         case .away: return "Away"
-        case .unknown: return "Unknown"
         }
     }
 }

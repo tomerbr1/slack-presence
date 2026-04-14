@@ -704,7 +704,7 @@ final class MicMonitor {
         let info = getDebugInfo()
         var lines: [String] = []
 
-        lines.append("=== SlackPresence Debug Info ===")
+        lines.append("=== Presently Debug Info ===")
         lines.append("Time: \(Date().formatted())")
         lines.append("")
         lines.append("Mic Permission: \(info.micPermissionStatus)")

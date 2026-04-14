@@ -1,4 +1,6 @@
-# Slack Presence Automation
+# Presently
+
+_Stop ghosting people by accident._
 
 A macOS menu bar app that automates Slack presence based on your schedule, call status, and calendar events.
 
@@ -41,20 +43,20 @@ By [Tomer Brami](https://github.com/tomerbr1)
 ### Homebrew (recommended)
 
 ```bash
-brew install --cask --appdir=~/Applications tomerbr1/tap/slack-presence
-xattr -cr ~/Applications/SlackPresence.app
+brew install --cask --appdir=~/Applications tomerbr1/tap/presently
+xattr -cr ~/Applications/Presently.app
 ```
 
 The `xattr` command is required to remove the quarantine attribute so macOS Gatekeeper allows the unsigned app to run. Without it, the app will not launch.
 
 To update:
 ```bash
-brew upgrade --cask slack-presence
+brew upgrade --cask presently
 ```
 
 To uninstall:
 ```bash
-brew uninstall --cask slack-presence
+brew uninstall --cask presently
 ```
 
 ### Build from Source
@@ -63,8 +65,8 @@ Requires macOS 13.0+ and Xcode 15+.
 
 1. Open the project in Xcode:
    ```bash
-   cd slack-presence
-   open SlackPresence.xcodeproj
+   cd presently
+   open Presently.xcodeproj
    ```
 
 2. Build and run (Cmd+R)
@@ -135,7 +137,7 @@ Click the menu bar icon to see:
 - Troubleshooting
 - Show Welcome Guide
 - Debug Info (Cmd+D)
-- About Slack Presence
+- About Presently
 
 ### Schedule Editor
 
@@ -188,7 +190,7 @@ Set custom Slack statuses that activate at specific times:
 
 ### Config File
 
-Config is stored at `~/.slackpresence/config.json`:
+Config is stored at `~/.presently/config.json`:
 
 ```json
 {
@@ -269,9 +271,9 @@ Credentials are stored securely in macOS Keychain, not in the config file.
 ## Project Structure
 
 ```
-SlackPresence/
+Presently/
 ├── App/
-│   ├── SlackPresenceApp.swift      # Entry point
+│   ├── PresentlyApp.swift          # Entry point
 │   ├── AppDelegate.swift           # Menu bar + window management
 │   └── Notifications.swift         # App-wide notification names
 ├── Views/

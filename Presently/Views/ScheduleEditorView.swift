@@ -83,7 +83,7 @@ struct ScheduleEditorView: View {
                 Image(systemName: "folder")
                     .font(.caption2)
                     .foregroundColor(.secondary)
-                Text("Config stored at ~/.slackpresence/config.json")
+                Text("Config stored at ~/.presently/config.json")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()

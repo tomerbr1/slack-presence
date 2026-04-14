@@ -103,7 +103,7 @@ struct LaunchAtLoginToggle: View {
                     Text("Launch at Login")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                    Text("Start SlackPresence when you log in")
+                    Text("Start Presently when you log in")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

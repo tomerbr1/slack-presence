@@ -190,7 +190,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         menu.addItem(NSMenuItem(title: "Show Welcome Guide", action: #selector(openWelcome), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Troubleshooting", action: #selector(openTroubleshooting), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Debug Info", action: #selector(debugMicPermission), keyEquivalent: "d"))
-        menu.addItem(NSMenuItem(title: "About Slack Presence", action: #selector(openAbout), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "About Presently", action: #selector(openAbout), keyEquivalent: ""))
 
         menu.addItem(NSMenuItem.separator())
 
@@ -231,7 +231,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                 button.image = createCompositeIcon(baseSymbol: "sun.max.fill", badgeSymbol: "zzz")
             } else {
                 let iconName = appState.menuBarIcon
-                let image = NSImage(systemSymbolName: iconName, accessibilityDescription: "Slack Presence")
+                let image = NSImage(systemSymbolName: iconName, accessibilityDescription: "Presently")
 
                 if let image = image {
                     let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
@@ -369,7 +369,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             let hostingController = NSHostingController(rootView: view)
 
             aboutWindow = NSWindow(contentViewController: hostingController)
-            aboutWindow?.title = "About Slack Presence"
+            aboutWindow?.title = "About Presently"
             aboutWindow?.setContentSize(NSSize(width: 280, height: 300))
             aboutWindow?.styleMask = [.titled, .closable]
             aboutWindow?.delegate = self
@@ -411,7 +411,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             let hostingController = NSHostingController(rootView: view)
 
             welcomeWindow = NSWindow(contentViewController: hostingController)
-            welcomeWindow?.title = "Welcome to SlackPresence"
+            welcomeWindow?.title = "Welcome to Presently"
             welcomeWindow?.setContentSize(NSSize(width: 520, height: 780))
             welcomeWindow?.styleMask = [.titled, .closable]
             welcomeWindow?.delegate = self

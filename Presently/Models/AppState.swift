@@ -4,7 +4,7 @@ import SwiftUI
 @Observable
 final class AppState {
     // Current state
-    var currentPresence: SlackPresence = .unknown
+    var currentPresence: Presence? = nil
     var isInCall: Bool = false
     var hasValidCredentials: Bool = false
     var isDNDActive: Bool = false
@@ -23,10 +23,10 @@ final class AppState {
     var lastUpdate: Date?
 
     // Override mode
-    var manualOverride: SlackPresence? = nil
+    var manualOverride: Presence? = nil
 
     // Computed
-    var effectivePresence: SlackPresence {
+    var effectivePresence: Presence? {
         if let override = manualOverride {
             return override
         }
@@ -37,14 +37,15 @@ final class AppState {
         if isOutOfOffice { return "airplane" }
         if isInMeeting { return "calendar" }
         if isInCall { return "headphones" }
-        switch effectivePresence {
+        guard let presence = effectivePresence else {
+            return "questionmark.circle"
+        }
+        switch presence {
         case .active:
             return "sun.max.fill"
         case .away:
             // moon.zzz.fill is a built-in SF Symbol for away + DND
             return isDNDActive ? "moon.zzz.fill" : "moon.fill"
-        case .unknown:
-            return "questionmark.circle"
         }
     }
 
@@ -57,13 +58,14 @@ final class AppState {
         if isOutOfOffice { return .orange }
         if isInMeeting { return .blue }
         if isInCall { return .purple }
-        switch effectivePresence {
+        guard let presence = effectivePresence else {
+            return .orange
+        }
+        switch presence {
         case .active:
             return .green
         case .away:
             return .gray
-        case .unknown:
-            return .orange
         }
     }
 

@@ -7,13 +7,13 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		A710D7D82F0DA33A008C910A /* SlackPresence.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SlackPresence.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A710D7D82F0DA33A008C910A /* Presently.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Presently.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A710D7DA2F0DA33A008C910A /* SlackPresence */ = {
+		A710D7DA2F0DA33A008C910A /* Presently */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = SlackPresence;
+			path = Presently;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -32,7 +32,7 @@
 		A710D7CF2F0DA33A008C910A = {
 			isa = PBXGroup;
 			children = (
-				A710D7DA2F0DA33A008C910A /* SlackPresence */,
+				A710D7DA2F0DA33A008C910A /* Presently */,
 				A710D7D92F0DA33A008C910A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -40,7 +40,7 @@
 		A710D7D92F0DA33A008C910A /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A710D7D82F0DA33A008C910A /* SlackPresence.app */,
+				A710D7D82F0DA33A008C910A /* Presently.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A710D7D72F0DA33A008C910A /* SlackPresence */ = {
+		A710D7D72F0DA33A008C910A /* Presently */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A710D7E32F0DA33D008C910A /* Build configuration list for PBXNativeTarget "SlackPresence" */;
+			buildConfigurationList = A710D7E32F0DA33D008C910A /* Build configuration list for PBXNativeTarget "Presently" */;
 			buildPhases = (
 				A710D7D42F0DA33A008C910A /* Sources */,
 				A710D7D52F0DA33A008C910A /* Frameworks */,
@@ -61,13 +61,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				A710D7DA2F0DA33A008C910A /* SlackPresence */,
+				A710D7DA2F0DA33A008C910A /* Presently */,
 			);
-			name = SlackPresence;
+			name = Presently;
 			packageProductDependencies = (
 			);
-			productName = SlackPresence;
-			productReference = A710D7D82F0DA33A008C910A /* SlackPresence.app */;
+			productName = Presently;
+			productReference = A710D7D82F0DA33A008C910A /* Presently.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -85,7 +85,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A710D7D32F0DA33A008C910A /* Build configuration list for PBXProject "SlackPresence" */;
+			buildConfigurationList = A710D7D32F0DA33A008C910A /* Build configuration list for PBXProject "Presently" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -99,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A710D7D72F0DA33A008C910A /* SlackPresence */,
+				A710D7D72F0DA33A008C910A /* Presently */,
 			);
 		};
 /* End PBXProject section */
@@ -255,7 +255,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "SlackPresence uses your calendar to automatically set your Slack status during meetings.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Presently uses your calendar to automatically set your Slack status during meetings.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -263,7 +263,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
 				MARKETING_VERSION = 1.8;
-				PRODUCT_BUNDLE_IDENTIFIER = io.github.tomerbr1.slackpresence;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.tomerbr1.presently;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -287,7 +287,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "SlackPresence uses your calendar to automatically set your Slack status during meetings.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Presently uses your calendar to automatically set your Slack status during meetings.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -295,7 +295,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.7;
 				MARKETING_VERSION = 1.8;
-				PRODUCT_BUNDLE_IDENTIFIER = io.github.tomerbr1.slackpresence;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.tomerbr1.presently;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -310,7 +310,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A710D7D32F0DA33A008C910A /* Build configuration list for PBXProject "SlackPresence" */ = {
+		A710D7D32F0DA33A008C910A /* Build configuration list for PBXProject "Presently" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A710D7E12F0DA33D008C910A /* Debug */,
@@ -319,7 +319,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A710D7E32F0DA33D008C910A /* Build configuration list for PBXNativeTarget "SlackPresence" */ = {
+		A710D7E32F0DA33D008C910A /* Build configuration list for PBXNativeTarget "Presently" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A710D7E42F0DA33D008C910A /* Debug */,

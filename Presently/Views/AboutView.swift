@@ -12,12 +12,12 @@ struct AboutView: View {
                 .shadow(color: .blue.opacity(0.3), radius: 8, y: 2)
 
             // Title
-            Text("Slack Presence")
+            Text("Presently")
                 .font(.title)
                 .fontWeight(.bold)
 
             // Tagline
-            Text("Automate your Slack availability")
+            Text("Stop ghosting people by accident")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 

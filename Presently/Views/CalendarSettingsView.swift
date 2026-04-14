@@ -91,7 +91,7 @@ struct CalendarSettingsContent: View {
                     Text("Calendar access required")
                         .font(.headline)
                 }
-                Text("SlackPresence needs access to your calendars to detect meetings.")
+                Text("Presently needs access to your calendars to detect meetings.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Button("Grant Calendar Access") {
@@ -573,7 +573,7 @@ struct CalendarConfigStepView: View {
                         ScheduleManager.shared.updateCalendarSyncInterval(minutes: newValue)
                         ScheduleManager.shared.saveConfig()
                     }
-                    Text("How often SlackPresence reads your macOS calendar for upcoming meetings")
+                    Text("How often Presently reads your macOS calendar for upcoming meetings")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

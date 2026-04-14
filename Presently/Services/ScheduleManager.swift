@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "com.slackpresence", category: "ScheduleManager")
+private let logger = Logger(subsystem: "com.user.presently", category: "ScheduleManager")
 
 final class ScheduleManager {
     static let shared = ScheduleManager()
@@ -21,7 +21,7 @@ final class ScheduleManager {
     private var configState: ConfigState?
 
     private let stateLock = NSLock()
-    private var lastAppliedPresence: SlackPresence?
+    private var lastAppliedPresence: Presence?
     private var lastCallState: Bool = false
     private var lastMeetingState: Bool = false
     private var lastAppliedScheduledStatus: ScheduledStatus?
@@ -341,7 +341,7 @@ final class ScheduleManager {
     }
 
     /// Returns the target presence, or nil if schedule is disabled for today (don't manage)
-    private func determineTargetPresence() -> SlackPresence? {
+    private func determineTargetPresence() -> Presence? {
         guard let appState = appState, let configState = configState else {
             return nil
         }

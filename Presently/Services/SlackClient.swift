@@ -70,7 +70,7 @@ final class SlackClient {
 
     // MARK: - Presence
 
-    func setPresence(_ presence: SlackPresence) async throws {
+    func setPresence(_ presence: Presence) async throws {
         guard let creds = credentials, creds.isValid else {
             throw SlackError.noCredentials
         }
@@ -178,8 +178,8 @@ final class SlackClient {
 
     // MARK: - Fetch Presence
 
-    /// Fetch actual presence from Slack (active/away)
-    func fetchPresence() async throws -> SlackPresence {
+    /// Fetch actual presence from Slack (active/away), or nil if Slack returns an unrecognized value
+    func fetchPresence() async throws -> Presence? {
         guard let creds = credentials, creds.isValid else {
             throw SlackError.noCredentials
         }
@@ -211,7 +211,7 @@ final class SlackClient {
         case "away":
             return .away
         default:
-            return .unknown
+            return nil
         }
     }
 

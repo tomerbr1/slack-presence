@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct SlackPresenceApp: App {
+struct PresentlyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {

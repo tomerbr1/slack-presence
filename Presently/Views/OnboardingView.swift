@@ -164,7 +164,7 @@ struct WelcomeStepView: View {
                     }
                 }
 
-            Text("Welcome to SlackPresence")
+            Text("Welcome to Presently")
                 .font(.largeTitle)
                 .fontWeight(.bold)
 
@@ -651,7 +651,7 @@ struct FinishStepView: View {
                 .font(.title2)
                 .fontWeight(.bold)
 
-            Text("SlackPresence is ready to manage your Slack presence automatically")
+            Text("Presently is ready to manage your Slack presence automatically")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

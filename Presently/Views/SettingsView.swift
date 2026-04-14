@@ -281,187 +281,187 @@ struct BehaviorTab: View {
     @State private var isRefreshingMic: Bool = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            // Call Detection
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Image(systemName: "mic.fill")
-                        .foregroundColor(.purple)
-                    Text("Call Detection")
-                        .font(.headline)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Call Detection
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Image(systemName: "mic.fill")
+                            .foregroundColor(.purple)
+                        Text("Call Detection")
+                            .font(.headline)
+                    }
+
+                    Toggle("Show :headphones: during calls", isOn: $configState.callDetectionEnabled)
+                        .onChange(of: configState.callDetectionEnabled) { _, newValue in
+                            ScheduleManager.shared.updateCallDetection(enabled: newValue)
+                            ScheduleManager.shared.saveConfig()
+                            if newValue { refreshMicStatus() }
+                        }
+
+                    if configState.callDetectionEnabled {
+                        HStack(spacing: 16) {
+                            StatusPill(label: "Mic", isActive: appState.micActive, activeText: "Active", inactiveText: "Idle")
+                            if appState.manualInCallOverride == true {
+                                Text("(Manual)")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            }
+                            Spacer()
+                            Button(action: refreshMicStatus) {
+                                Image(systemName: isRefreshingMic ? "arrow.clockwise" : "arrow.clockwise")
+                                    .rotationEffect(.degrees(isRefreshingMic ? 360 : 0))
+                                    .animation(isRefreshingMic ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isRefreshingMic)
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(isRefreshingMic)
+                        }
+                        .padding(10)
+                        .background(Color(.controlBackgroundColor).opacity(0.5))
+                        .cornerRadius(8)
+
+                        // Detection timing settings
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Call start delay:")
+                                    .font(.caption)
+                                Stepper("\(configState.callStartDelay)s", value: $configState.callStartDelay, in: 1...30)
+                                    .font(.caption)
+                                    .onChange(of: configState.callStartDelay) { _, newValue in
+                                        MicMonitor.shared.callStartDelay = TimeInterval(newValue)
+                                        ScheduleManager.shared.saveConfig()
+                                    }
+                            }
+                            HStack {
+                                Text("Call end delay:")
+                                    .font(.caption)
+                                Stepper("\(configState.callEndDelay)s", value: $configState.callEndDelay, in: 1...30)
+                                    .font(.caption)
+                                    .onChange(of: configState.callEndDelay) { _, newValue in
+                                        MicMonitor.shared.callEndDelay = TimeInterval(newValue)
+                                        ScheduleManager.shared.saveConfig()
+                                    }
+                            }
+                            Text("Time to wait before confirming call state changes")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(10)
+                        .background(Color(.controlBackgroundColor).opacity(0.5))
+                        .cornerRadius(8)
+                    }
                 }
 
-                Toggle("Show :headphones: during calls", isOn: $configState.callDetectionEnabled)
-                    .onChange(of: configState.callDetectionEnabled) { _, newValue in
-                        ScheduleManager.shared.updateCallDetection(enabled: newValue)
-                        ScheduleManager.shared.saveConfig()
-                        if newValue { refreshMicStatus() }
+                Divider()
+
+                // DND Settings
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Image(systemName: "bell.slash.fill")
+                            .foregroundColor(.orange)
+                        Text("Do Not Disturb")
+                            .font(.headline)
                     }
 
-                if configState.callDetectionEnabled {
-                    HStack(spacing: 16) {
-                        StatusPill(label: "Mic", isActive: appState.micActive, activeText: "Active", inactiveText: "Idle")
-                        if appState.manualInCallOverride == true {
-                            Text("(Manual)")
-                                .font(.caption)
-                                .foregroundColor(.orange)
+                    Toggle("Pause notifications when away", isOn: $configState.pauseNotificationsWhenAway)
+                        .onChange(of: configState.pauseNotificationsWhenAway) { _, newValue in
+                            ScheduleManager.shared.updatePauseNotifications(enabled: newValue)
+                            ScheduleManager.shared.saveConfig()
                         }
-                        Spacer()
-                        Button(action: refreshMicStatus) {
-                            Image(systemName: isRefreshingMic ? "arrow.clockwise" : "arrow.clockwise")
-                                .rotationEffect(.degrees(isRefreshingMic ? 360 : 0))
-                                .animation(isRefreshingMic ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isRefreshingMic)
-                        }
-                        .buttonStyle(.borderless)
-                        .disabled(isRefreshingMic)
-                    }
-                    .padding(10)
-                    .background(Color(.controlBackgroundColor).opacity(0.5))
-                    .cornerRadius(8)
 
-                    // Detection timing settings
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Call start delay:")
-                                .font(.caption)
-                            Stepper("\(configState.callStartDelay)s", value: $configState.callStartDelay, in: 1...30)
-                                .font(.caption)
-                                .onChange(of: configState.callStartDelay) { _, newValue in
-                                    MicMonitor.shared.callStartDelay = TimeInterval(newValue)
-                                    ScheduleManager.shared.saveConfig()
-                                }
-                        }
-                        HStack {
-                            Text("Call end delay:")
-                                .font(.caption)
-                            Stepper("\(configState.callEndDelay)s", value: $configState.callEndDelay, in: 1...30)
-                                .font(.caption)
-                                .onChange(of: configState.callEndDelay) { _, newValue in
-                                    MicMonitor.shared.callEndDelay = TimeInterval(newValue)
-                                    ScheduleManager.shared.saveConfig()
-                                }
-                        }
-                        Text("Time to wait before confirming call state changes")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(10)
-                    .background(Color(.controlBackgroundColor).opacity(0.5))
-                    .cornerRadius(8)
-                }
-            }
-
-            Divider()
-
-            // DND Settings
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Image(systemName: "bell.slash.fill")
-                        .foregroundColor(.orange)
-                    Text("Do Not Disturb")
-                        .font(.headline)
-                }
-
-                Toggle("Pause notifications when away", isOn: $configState.pauseNotificationsWhenAway)
-                    .onChange(of: configState.pauseNotificationsWhenAway) { _, newValue in
-                        ScheduleManager.shared.updatePauseNotifications(enabled: newValue)
-                        ScheduleManager.shared.saveConfig()
-                    }
-
-                Text("Automatically enables DND during your scheduled away hours")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Divider()
-
-            // Schedule preferences
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Image(systemName: "calendar.badge.clock")
-                        .foregroundColor(.green)
-                    Text("Schedule")
-                        .font(.headline)
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Work week starts on")
-                        .font(.subheadline)
-                    Picker("Work week starts on", selection: $configState.workWeekStart) {
-                        Text("Sunday").tag(WorkWeekStart.sunday)
-                        Text("Monday").tag(WorkWeekStart.monday)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .onChange(of: configState.workWeekStart) { _, _ in
-                        ScheduleManager.shared.saveConfig()
-                    }
-                    Text("Controls what \"Copy to Weekdays\" does in the Schedule Editor and which day is pre-selected when you open it.")
+                    Text("Automatically enables DND during your scheduled away hours")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-            }
 
-            Divider()
+                Divider()
 
-            // Launch at Login
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Image(systemName: "power")
-                        .foregroundColor(.blue)
-                    Text("Startup")
-                        .font(.headline)
-                }
-
-                LaunchAtLoginToggle(showIcon: false)
-            }
-
-            Divider()
-
-            // Current Status
-            HStack(spacing: 12) {
-                Image(systemName: appState.menuBarIcon)
-                    .font(.title)
-                    .foregroundColor(appState.menuBarIconColor)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(appState.statusText)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        if appState.isDNDActive {
-                            Text("• Notifications Paused")
-                                .font(.subheadline)
-                                .foregroundColor(.orange)
-                        }
+                // Schedule preferences
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Image(systemName: "calendar.badge.clock")
+                            .foregroundColor(.green)
+                        Text("Schedule")
+                            .font(.headline)
                     }
-                    if let lastUpdate = appState.lastUpdate {
-                        Text("Updated \(lastUpdate.formatted(date: .omitted, time: .shortened))")
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Work week starts on")
+                            .font(.subheadline)
+                        Picker("Work week starts on", selection: $configState.workWeekStart) {
+                            Text("Sunday").tag(WorkWeekStart.sunday)
+                            Text("Monday").tag(WorkWeekStart.monday)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .onChange(of: configState.workWeekStart) { _, _ in
+                            ScheduleManager.shared.saveConfig()
+                        }
+                        Text("Controls what \"Copy to Weekdays\" does in the Schedule Editor and which day is pre-selected when you open it.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
 
-                Spacer()
+                Divider()
 
-                if appState.isDNDActive {
-                    Text("DND")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.orange.opacity(0.2))
-                        .foregroundColor(.orange)
-                        .cornerRadius(4)
+                // Launch at Login
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Image(systemName: "power")
+                            .foregroundColor(.blue)
+                        Text("Startup")
+                            .font(.headline)
+                    }
+
+                    LaunchAtLoginToggle(showIcon: false)
                 }
-            }
-            .padding(12)
-            .background(Color(.controlBackgroundColor).opacity(0.5))
-            .cornerRadius(10)
 
-            Spacer()
+                Divider()
+
+                // Current Status
+                HStack(spacing: 12) {
+                    Image(systemName: appState.menuBarIcon)
+                        .font(.title)
+                        .foregroundColor(appState.menuBarIconColor)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(appState.statusText)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            if appState.isDNDActive {
+                                Text("• Notifications Paused")
+                                    .font(.subheadline)
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                        if let lastUpdate = appState.lastUpdate {
+                            Text("Updated \(lastUpdate.formatted(date: .omitted, time: .shortened))")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Spacer()
+
+                    if appState.isDNDActive {
+                        Text("DND")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.orange.opacity(0.2))
+                            .foregroundColor(.orange)
+                            .cornerRadius(4)
+                    }
+                }
+                .padding(12)
+                .background(Color(.controlBackgroundColor).opacity(0.5))
+                .cornerRadius(10)
+            }
+            .padding(20)
         }
-        .padding(20)
         .onAppear {
             if configState.callDetectionEnabled {
                 refreshMicStatus()

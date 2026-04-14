@@ -34,6 +34,8 @@ struct OnboardingView: View {
 
     @State private var currentStep: OnboardingStep = .welcome
     @State private var dontShowAgain: Bool = true
+    @State private var hasUnsavedCredentials: Bool = false
+    @State private var showSavePrompt: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -48,7 +50,7 @@ struct OnboardingView: View {
                 case .welcome:
                     WelcomeStepView()
                 case .credentials:
-                    CredentialsStepView(appState: appState)
+                    CredentialsStepView(appState: appState, hasUnsavedCredentials: $hasUnsavedCredentials)
                 case .devices:
                     DevicesStepView(configState: configState)
                 case .schedule:
@@ -100,10 +102,10 @@ struct OnboardingView: View {
                     .buttonStyle(.borderedProminent)
                 } else {
                     Button("Continue") {
-                        withAnimation {
-                            if let next = OnboardingStep(rawValue: currentStep.rawValue + 1) {
-                                currentStep = next
-                            }
+                        if currentStep == .credentials && hasUnsavedCredentials {
+                            showSavePrompt = true
+                        } else {
+                            advanceStep()
                         }
                     }
                     .buttonStyle(.borderedProminent)
@@ -112,6 +114,26 @@ struct OnboardingView: View {
             .padding(20)
         }
         .frame(width: 520, height: 720)
+        .alert("Save credentials?", isPresented: $showSavePrompt) {
+            Button("Save & Continue") {
+                NotificationCenter.default.post(name: .saveCredentialsRequested, object: nil)
+                advanceStep()
+            }
+            Button("Don't Save", role: .destructive) {
+                advanceStep()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("You have unsaved changes to your token or cookie. If you continue without saving, they will be lost and the app won't be able to talk to Slack.")
+        }
+    }
+
+    private func advanceStep() {
+        withAnimation {
+            if let next = OnboardingStep(rawValue: currentStep.rawValue + 1) {
+                currentStep = next
+            }
+        }
     }
 
     private func completeOnboarding() {
@@ -224,15 +246,22 @@ struct WelcomeStepView: View {
 
 struct CredentialsStepView: View {
     @Bindable var appState: AppState
+    @Binding var hasUnsavedCredentials: Bool
 
     @State private var token: String = ""
     @State private var cookie: String = ""
+    @State private var lastSavedToken: String = ""
+    @State private var lastSavedCookie: String = ""
     @State private var isTesting: Bool = false
     @State private var connectionStatus: ConnectionStatus = .unknown
     @State private var errorMessage: String?
 
     enum ConnectionStatus {
         case unknown, testing, connected, failed
+    }
+
+    private func updateDirtyFlag() {
+        hasUnsavedCredentials = token != lastSavedToken || cookie != lastSavedCookie
     }
 
     var body: some View {
@@ -315,6 +344,11 @@ struct CredentialsStepView: View {
         }
         .padding(.top, 20)
         .onAppear { loadCredentials() }
+        .onChange(of: token) { _, _ in updateDirtyFlag() }
+        .onChange(of: cookie) { _, _ in updateDirtyFlag() }
+        .onReceive(NotificationCenter.default.publisher(for: .saveCredentialsRequested)) { _ in
+            saveCredentials()
+        }
     }
 
     // MARK: - Status Display
@@ -377,6 +411,9 @@ struct CredentialsStepView: View {
                 connectionStatus = .connected
             }
         }
+        lastSavedToken = token
+        lastSavedCookie = cookie
+        updateDirtyFlag()
     }
 
     /// Cleans credential value by trimming whitespace and surrounding quotes
@@ -395,6 +432,9 @@ struct CredentialsStepView: View {
         do {
             try ConfigManager.shared.saveCredentials(creds)
             SlackClient.shared.updateCredentials(creds)
+            lastSavedToken = token
+            lastSavedCookie = cookie
+            updateDirtyFlag()
             // Verify credentials work before marking as connected
             connectionStatus = .testing
             isTesting = true

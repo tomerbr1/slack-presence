@@ -19,4 +19,7 @@ extension Notification.Name {
 
     /// Open the troubleshooting window
     static let openTroubleshooting = Notification.Name("openTroubleshooting")
+
+    /// Ask the credentials step in Onboarding to persist the currently-entered token/cookie
+    static let saveCredentialsRequested = Notification.Name("saveCredentialsRequested")
 }

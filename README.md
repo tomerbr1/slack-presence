@@ -1,6 +1,8 @@
-# Presently
+<p align="center">
+  <img src="Assets/logo.jpg" alt="Presently — Stop ghosting people by accident" width="600">
+</p>
 
-_Stop ghosting people by accident._
+# Presently
 
 A macOS menu bar app that automates Slack presence based on your schedule, call status, and calendar events.
 

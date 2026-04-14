@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "com.user.presently", category: "ScheduleManager")
+private let logger = Logger(subsystem: "io.github.tomerbr1.presently", category: "ScheduleManager")
 
 final class ScheduleManager {
     static let shared = ScheduleManager()

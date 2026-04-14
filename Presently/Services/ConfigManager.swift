@@ -140,8 +140,8 @@ final class ConfigManager {
     private let configFile: URL
 
     // Keychain keys
-    private let tokenKey = "com.user.presently.token"
-    private let cookieKey = "com.user.presently.cookie"
+    private let tokenKey = "io.github.tomerbr1.presently.token"
+    private let cookieKey = "io.github.tomerbr1.presently.cookie"
 
     private init() {
         let home = FileManager.default.homeDirectoryForCurrentUser
@@ -226,7 +226,7 @@ final class ConfigManager {
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "com.user.presently",
+            kSecAttrService as String: "io.github.tomerbr1.presently",
             kSecAttrAccount as String: key,
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
@@ -241,7 +241,7 @@ final class ConfigManager {
     private func loadFromKeychain(key: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "com.user.presently",
+            kSecAttrService as String: "io.github.tomerbr1.presently",
             kSecAttrAccount as String: key,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
@@ -262,7 +262,7 @@ final class ConfigManager {
     private func deleteFromKeychain(key: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "com.user.presently",
+            kSecAttrService as String: "io.github.tomerbr1.presently",
             kSecAttrAccount as String: key
         ]
         SecItemDelete(query as CFDictionary)

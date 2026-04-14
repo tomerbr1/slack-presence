@@ -375,6 +375,35 @@ struct BehaviorTab: View {
 
             Divider()
 
+            // Schedule preferences
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Image(systemName: "calendar.badge.clock")
+                        .foregroundColor(.green)
+                    Text("Schedule")
+                        .font(.headline)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Work week starts on")
+                        .font(.subheadline)
+                    Picker("Work week starts on", selection: $configState.workWeekStart) {
+                        Text("Sunday").tag(WorkWeekStart.sunday)
+                        Text("Monday").tag(WorkWeekStart.monday)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .onChange(of: configState.workWeekStart) { _, _ in
+                        ScheduleManager.shared.saveConfig()
+                    }
+                    Text("Controls what \"Copy to Weekdays\" does in the Schedule Editor and which day is pre-selected when you open it.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Divider()
+
             // Launch at Login
             VStack(alignment: .leading, spacing: 10) {
                 HStack {

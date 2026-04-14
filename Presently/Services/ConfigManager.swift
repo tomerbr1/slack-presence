@@ -22,6 +22,7 @@ struct AppConfig: Codable {
     var oooEmoji: String
     var oooStatusText: String
     var oooPauseNotifications: Bool
+    var workWeekStart: WorkWeekStart
 
     // Support old config format migration
     enum CodingKeys: String, CodingKey {
@@ -46,6 +47,7 @@ struct AppConfig: Codable {
         case oooEmoji
         case oooStatusText
         case oooPauseNotifications
+        case workWeekStart
     }
 
     init() {
@@ -69,6 +71,7 @@ struct AppConfig: Codable {
         oooEmoji = ":no_entry:"
         oooStatusText = "Out of office"
         oooPauseNotifications = true
+        workWeekStart = .monday
     }
 
     init(from decoder: Decoder) throws {
@@ -92,6 +95,7 @@ struct AppConfig: Codable {
         oooEmoji = try container.decodeIfPresent(String.self, forKey: .oooEmoji) ?? ":palm_tree:"
         oooStatusText = try container.decodeIfPresent(String.self, forKey: .oooStatusText) ?? "Out of office"
         oooPauseNotifications = try container.decodeIfPresent(Bool.self, forKey: .oooPauseNotifications) ?? true
+        workWeekStart = try container.decodeIfPresent(WorkWeekStart.self, forKey: .workWeekStart) ?? .monday
 
         // Try new key first, fall back to legacy key
         if let enabled = try? container.decode(Bool.self, forKey: .callDetectionEnabled) {
@@ -125,6 +129,7 @@ struct AppConfig: Codable {
         try container.encode(oooEmoji, forKey: .oooEmoji)
         try container.encode(oooStatusText, forKey: .oooStatusText)
         try container.encode(oooPauseNotifications, forKey: .oooPauseNotifications)
+        try container.encode(workWeekStart, forKey: .workWeekStart)
     }
 }
 

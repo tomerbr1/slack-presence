@@ -3,7 +3,7 @@ import SwiftUI
 struct ScheduleEditorView: View {
     @Bindable var configState: ConfigState
 
-    @State private var selectedDay: Int = 1  // Sunday (Israel workweek)
+    @State private var selectedDay: Int = 1  // Set in .onAppear from configState.workWeekStart
     @State private var originalSchedule: WeekSchedule?
     @State private var showDiscardAlert = false
 
@@ -12,18 +12,47 @@ struct ScheduleEditorView: View {
         return configState.schedule != original
     }
 
-    private let weekdays = [
-        (1, "Sunday"),
-        (2, "Monday"),
-        (3, "Tuesday"),
-        (4, "Wednesday"),
-        (5, "Thursday"),
-        (6, "Friday"),
-        (7, "Saturday")
-    ]
+    /// Day-selector order. Starts on whichever day the user's work week starts on,
+    /// so Monday-convention users see Mon first and Sunday-convention users see Sun first.
+    private var weekdays: [(Int, String)] {
+        let all: [(Int, String)] = [
+            (1, "Sunday"),
+            (2, "Monday"),
+            (3, "Tuesday"),
+            (4, "Wednesday"),
+            (5, "Thursday"),
+            (6, "Friday"),
+            (7, "Saturday")
+        ]
+        switch configState.workWeekStart {
+        case .sunday: return all
+        case .monday: return Array(all[1...]) + [all[0]]  // Mon..Sat, Sun
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
+            // Work week preference
+            HStack(spacing: 8) {
+                Text("Work week starts on:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Picker("Work week starts on", selection: $configState.workWeekStart) {
+                    Text("Sunday").tag(WorkWeekStart.sunday)
+                    Text("Monday").tag(WorkWeekStart.monday)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .onChange(of: configState.workWeekStart) { _, _ in
+                    ScheduleManager.shared.saveConfig()
+                }
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+
             // Day selector
             HStack(spacing: 4) {
                 ForEach(weekdays, id: \.0) { day in
@@ -36,7 +65,8 @@ struct ScheduleEditorView: View {
                     }
                 }
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.bottom, 12)
 
             Divider()
 
@@ -94,6 +124,7 @@ struct ScheduleEditorView: View {
         .frame(minWidth: 450, minHeight: 400)
         .onAppear {
             originalSchedule = configState.schedule
+            selectedDay = configState.workWeekStart.firstWeekdayInteger
         }
         .alert("Discard Changes?", isPresented: $showDiscardAlert) {
             Button("Cancel", role: .cancel) { }
@@ -122,7 +153,7 @@ struct ScheduleEditorView: View {
 
     private func copyToWeekdays() {
         let source = configState.schedule.schedule(for: selectedDay)
-        for day in 1...5 {  // Sun-Thu (Israel workweek)
+        for day in configState.workWeekStart.weekdayIntegers {
             configState.schedule.setSchedule(source, for: day)
         }
     }

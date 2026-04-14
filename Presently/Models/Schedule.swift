@@ -1,5 +1,30 @@
 import Foundation
 
+// MARK: - Work Week Start
+
+/// Which day the user's work week begins on, which drives the definition of "weekdays"
+/// for bulk operations like the Schedule Editor's "Copy to Weekdays" button.
+enum WorkWeekStart: String, Codable, CaseIterable {
+    case sunday
+    case monday
+
+    /// Calendar weekday integers (1=Sun..7=Sat) for the 5 work days under this convention.
+    var weekdayIntegers: [Int] {
+        switch self {
+        case .sunday: return [1, 2, 3, 4, 5]  // Sun, Mon, Tue, Wed, Thu
+        case .monday: return [2, 3, 4, 5, 6]  // Mon, Tue, Wed, Thu, Fri
+        }
+    }
+
+    /// The Calendar weekday integer (1=Sun..7=Sat) of the first work day.
+    var firstWeekdayInteger: Int {
+        switch self {
+        case .sunday: return 1
+        case .monday: return 2
+        }
+    }
+}
+
 // MARK: - Scheduled Status
 
 struct ScheduledStatus: Codable, Equatable, Identifiable {

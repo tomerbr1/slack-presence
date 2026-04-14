@@ -108,6 +108,7 @@ final class ConfigState {
     var oooEmoji: String = ":no_entry:"
     var oooStatusText: String = "Out of office"
     var oooPauseNotifications: Bool = true
+    var workWeekStart: WorkWeekStart = .monday
 
     // Track current active scheduled status
     var activeScheduledStatus: ScheduledStatus? = nil
@@ -133,6 +134,7 @@ final class ConfigState {
         oooEmoji = config.oooEmoji
         oooStatusText = config.oooStatusText
         oooPauseNotifications = config.oooPauseNotifications
+        workWeekStart = config.workWeekStart
 
         // Apply to MicMonitor
         MicMonitor.shared.callStartDelay = TimeInterval(callStartDelay)
@@ -162,6 +164,7 @@ final class ConfigState {
         config.oooEmoji = oooEmoji
         config.oooStatusText = oooStatusText
         config.oooPauseNotifications = oooPauseNotifications
+        config.workWeekStart = workWeekStart
         return config
     }
 }

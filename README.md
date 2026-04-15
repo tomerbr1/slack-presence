@@ -60,7 +60,10 @@ The `xattr` command is required to remove the quarantine attribute so macOS Gate
 To update:
 ```bash
 brew upgrade --cask presently
+xattr -cr ~/Applications/Presently.app   # re-strip quarantine if needed
 ```
+
+Your Slack credentials and settings are preserved across upgrades. If `brew upgrade` reports no change, run `brew update` first to refresh the tap.
 
 To uninstall:
 ```bash

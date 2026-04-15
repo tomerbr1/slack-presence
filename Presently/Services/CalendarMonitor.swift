@@ -88,6 +88,18 @@ final class CalendarMonitor {
         NotificationCenter.default.removeObserver(self, name: .EKEventStoreChanged, object: eventStore)
         onMeetingStateChanged = nil
         onOOOStateChanged = nil
+
+        // Cached state is stale the moment we stop. Any caller that reads it
+        // after this point would get a lie about whether a meeting is active.
+        stateLock.lock()
+        lastKnownMeetingState = false
+        currentMeetingEndDate = nil
+        currentMeetingTitle = nil
+        lastKnownOOOState = false
+        currentOOOEndDate = nil
+        cachedEvents = []
+        lastEventFetch = .distantPast
+        stateLock.unlock()
     }
 
     // MARK: - Public State Access

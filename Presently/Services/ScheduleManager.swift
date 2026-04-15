@@ -738,28 +738,23 @@ final class ScheduleManager {
     func clearManualMeeting() {
         guard let appState = appState else { return }
 
-        // Check if a real calendar meeting is still active
-        let realMeeting = calendarMonitor.isInMeeting()
-
+        // Unconditional clear: the user's explicit action always wins over
+        // cached calendar state. If calendar sync is on and a real meeting
+        // is still active, the next poll will re-detect it within 60s.
         Task { @MainActor in
-            appState.isInMeeting = realMeeting
+            appState.isInMeeting = false
             appState.currentMeetingTitle = nil
             NotificationCenter.default.post(name: .updateMenuBarIcon, object: nil)
         }
 
-        if realMeeting {
-            // Real calendar meeting still active - restore calendar meeting status
-            stateLock.withLock { lastMeetingState = true }
-        } else {
-            // No real meeting - clear status
-            stateLock.withLock { lastMeetingState = false }
-            Task {
-                do {
-                    try await slackClient.clearStatus()
-                    await MainActor.run { appState.updateStatus("Meeting cleared") }
-                } catch {
-                    await MainActor.run { appState.setError(error.localizedDescription) }
-                }
+        stateLock.withLock { lastMeetingState = false }
+
+        Task {
+            do {
+                try await slackClient.clearStatus()
+                await MainActor.run { appState.updateStatus("Meeting cleared") }
+            } catch {
+                await MainActor.run { appState.setError(error.localizedDescription) }
             }
         }
     }
@@ -854,6 +849,23 @@ final class ScheduleManager {
             calendarMonitor.startMonitoring()
         } else {
             calendarMonitor.stopMonitoring()
+
+            // Clear any auto-detected meeting/OOO state. Otherwise toggling
+            // sync off while a meeting is "active" leaves the menu bar icon
+            // stranded on meeting/calendar forever.
+            if let appState = appState {
+                Task { @MainActor in
+                    appState.isInMeeting = false
+                    appState.currentMeetingTitle = nil
+                    appState.isOutOfOffice = false
+                    appState.oooEndDate = nil
+                    NotificationCenter.default.post(name: .updateMenuBarIcon, object: nil)
+                }
+            }
+            stateLock.withLock {
+                lastMeetingState = false
+                lastOOOState = false
+            }
         }
     }
 

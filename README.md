@@ -265,7 +265,7 @@ Credentials are stored securely in macOS Keychain, not in the config file.
 - **Syncs with actual Slack status** every 60 seconds (reflects manual changes in Slack)
 - Sets Slack to "active" during work hours, "away" outside
 
-### Call Detection
+### Mic Detection
 - Monitors all audio input devices (microphones) connected to the system
 - When any microphone is actively being captured → sets :headphones: status
 - Debouncing prevents flickering:

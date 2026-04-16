@@ -51,8 +51,8 @@ By [Tomer Brami](https://github.com/tomerbr1)
 ### Homebrew (recommended)
 
 ```bash
-brew install --cask --appdir=~/Applications tomerbr1/tap/presently
-xattr -cr ~/Applications/Presently.app
+brew install --cask tomerbr1/tap/presently
+xattr -cr /Applications/Presently.app
 ```
 
 The `xattr` command is required to remove the quarantine attribute so macOS Gatekeeper allows the unsigned app to run. Without it, the app will not launch.
@@ -60,7 +60,7 @@ The `xattr` command is required to remove the quarantine attribute so macOS Gate
 To update:
 ```bash
 brew upgrade --cask presently
-xattr -cr ~/Applications/Presently.app   # re-strip quarantine if needed
+xattr -cr /Applications/Presently.app   # re-strip quarantine if needed
 ```
 
 Your Slack credentials and settings are preserved across upgrades. If `brew upgrade` reports no change, run `brew update` first to refresh the tap.

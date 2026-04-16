@@ -84,6 +84,7 @@ By [Tomer Brami](https://github.com/tomerbr1)
 ```bash
 brew install --cask tomerbr1/tap/presently
 xattr -cr /Applications/Presently.app
+open /Applications/Presently.app
 ```
 
 The `xattr` command is required to remove the quarantine attribute so macOS Gatekeeper allows the unsigned app to run. Without it, the app will not launch.
@@ -93,6 +94,8 @@ To update:
 brew upgrade --cask presently
 xattr -cr /Applications/Presently.app   # re-strip quarantine if needed
 ```
+
+After upgrading, quit Presently from the menu bar and launch it again to pick up the new version.
 
 Your Slack credentials and settings are preserved across upgrades. If `brew upgrade` reports no change, run `brew update` first to refresh the tap.
 

@@ -23,6 +23,37 @@ Slack doesn't have native quiet hours or automatic call detection. This app fill
 | Slack has no quiet hours | Schedule work hours - automatically go Away outside them |
 | DND status isn't visible | Menu bar icon shows when notifications are paused |
 
+## Table of Contents
+
+- [Why?](#why)
+- [Features](#features)
+- [Installation](#installation)
+  - [Homebrew (recommended)](#homebrew-recommended)
+  - [Build from Source](#build-from-source)
+  - [First Launch](#first-launch)
+- [Slack Token Setup](#slack-token-setup)
+  - [Step 1: Get your xoxc token](#step-1-get-your-xoxc-token)
+  - [Step 2: Get your d cookie](#step-2-get-your-d-cookie)
+  - [Step 3: Enter in the app](#step-3-enter-in-the-app)
+  - [Token Refresh](#token-refresh)
+- [Usage](#usage)
+  - [Menu Bar](#menu-bar)
+  - [Schedule Editor](#schedule-editor)
+  - [Call Detection](#call-detection)
+  - [Calendar Sync](#calendar-sync)
+  - [Scheduled Statuses](#scheduled-statuses)
+- [Configuration](#configuration)
+  - [Config File](#config-file)
+  - [Credentials](#credentials)
+- [How It Works](#how-it-works)
+  - [Presence Management](#presence-management)
+  - [Mic Detection](#mic-detection)
+  - [Priority](#priority)
+- [Troubleshooting](#troubleshooting)
+- [Privacy](#privacy)
+- [Project Structure](#project-structure)
+- [License](#license)
+
 ## Features
 
 - **Welcome guide** walks you through setup on first launch
